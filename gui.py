@@ -8,20 +8,20 @@ root = Tk()
 root.title("Keithley 2401 GUI")
 
 # Define variables
-source_voltage = DoubleVar
-source_delay = DoubleVar
-source_voltage_start = DoubleVar
-source_voltage_stop = DoubleVar
-source_voltage_step = DoubleVar
-trig_count = DoubleVar
+source_voltage = DoubleVar(root)
+source_delay = DoubleVar(root)
+source_voltage_start = DoubleVar(root)
+source_voltage_stop = DoubleVar(root)
+source_voltage_step = DoubleVar(root)
+trig_count = DoubleVar(root)
 
 # Define lists of accepted inputs for string variables
 rangenames = ('BEST', 'WORST')
 modenames = ('SWE', 'OTHER')
 spacenames = ('LIN', 'OTHER')
-rnames = StringVar(value=rangenames)
-mnames = StringVar(value=modenames)
-snames = StringVar(value=spacenames)
+rnames = StringVar(root, value=rangenames)
+mnames = StringVar(root, value=modenames)
+snames = StringVar(root, value=spacenames)
 
 # Create frame structure to place widgets in
 c = ttk.Frame(root, padding=(5, 5, 12, 0))
@@ -155,7 +155,9 @@ for i in range(0,len(spacenames),2):
 with open('values.json', 'r') as openfile:
     saved_vals = json.load(openfile)
 
-source_voltage.set(float(saved_vals["source_voltage"]))
+print(saved_vals["source_voltage"])
+
+source_voltage.set(saved_vals["source_voltage"])
 source_delay.set(saved_vals["source_delay"])
 source_voltage_start.set(saved_vals["source_voltage_start"])
 source_voltage_stop.set(saved_vals["source_voltage_stop"])
