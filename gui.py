@@ -98,7 +98,7 @@ def setValues():
     Reads all values from GUI, saves all values to json file if filled out
     or informs user information is missing
     '''
-    # Check to see if any boxes are empty (should be impossible)
+    # Check to see if any boxes are empty (should be impossible as previous values are filled in)
     if (len(src_sweep_range_lbox.curselection()) != 1 or
         len(src_voltage_mode_lbox.curselection()) != 1 or
         len(src_sweep_space_lbox.curselection()) != 1):
@@ -176,6 +176,8 @@ for i in range(0,len(spacenames),2):
     src_sweep_space_lbox.itemconfigure(i, background='#f0f0ff')
 
 def sweepSpaceChange(*args):
+    if len(src_sweep_space_lbox.curselection()) != 1:
+        return
     if spacenames[src_sweep_space_lbox.curselection()[0]] == 'LOG':
         src_voltage_step_entry.grid_forget()
         src_voltage_step_label.grid_forget()
@@ -192,27 +194,28 @@ def sweepSpaceChange(*args):
         src_voltage_step_entry.grid(column=2, columnspan=1, row=8, padx=10)
         src_voltage_step_scale.grid(column=2, columnspan=1, row=9, padx=10)
 
-
 # Trigger a function every time sweep space choice is changed
 src_sweep_space_lbox.bind('<<ListboxSelect>>', sweepSpaceChange)
 
-
 # Set starting values
-with open('values.json', 'r') as openfile:
-    saved_vals = json.load(openfile)
+try:
+    with open('values.json', 'r') as openfile:
+        saved_vals = json.load(openfile)
 
-source_voltage.set(saved_vals["source_voltage"])
-source_delay.set(saved_vals["source_delay"])
-source_voltage_start.set(saved_vals["source_voltage_start"])
-source_voltage_stop.set(saved_vals["source_voltage_stop"])
-source_voltage_step.set(saved_vals["source_voltage_step"])
-log_num_steps.set(saved_vals["log_num_steps"])
-trig_count.set(saved_vals["trig_count"])
-current_compliance.set(saved_vals["current_compliance"])
-is_up_down.set(saved_vals["is_up_down"])
-src_sweep_range_lbox.selection_set(saved_vals["sweep_range_index"])
-src_voltage_mode_lbox.selection_set(saved_vals["voltage_mode_index"])
-src_sweep_space_lbox.selection_set(saved_vals["sweep_space_index"])
+    source_voltage.set(saved_vals["source_voltage"])
+    source_delay.set(saved_vals["source_delay"])
+    source_voltage_start.set(saved_vals["source_voltage_start"])
+    source_voltage_stop.set(saved_vals["source_voltage_stop"])
+    source_voltage_step.set(saved_vals["source_voltage_step"])
+    log_num_steps.set(saved_vals["log_num_steps"])
+    trig_count.set(saved_vals["trig_count"])
+    current_compliance.set(saved_vals["current_compliance"])
+    is_up_down.set(saved_vals["is_up_down"])
+    src_sweep_range_lbox.selection_set(saved_vals["sweep_range_index"])
+    src_voltage_mode_lbox.selection_set(saved_vals["voltage_mode_index"])
+    src_sweep_space_lbox.selection_set(saved_vals["sweep_space_index"])
+except:
+    print("Previous values not available, no JSON file found.")
 
 # Run sweepSpaceChange once to populate blank space
 sweepSpaceChange()
