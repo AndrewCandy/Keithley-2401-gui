@@ -1,173 +1,64 @@
 import pyvisa
 import csv
 import matplotlib.pyplot as plt
-import gui
-import json
+import os
 from datetime import datetime
 import time
-## Test and features to add: 
-# Forming Pulse, Scientific Notation, save the csv without having to name it everytime, 
-# Limits to each variable are as follows: When in Lin Voltage: 0-3.5V, Current:0-1A, 
-# trig_count:should be very large, step: should be very small,delay should be very small microor nano seconds
-# When working with Log: Voltage:Cant start at 0 and same stopping point, Current same thing, 
-# Points: very large number, same with trig_count. 
-# When working with custom: a list of values is needed to tell what amplitude pulse to send out. 
-# Forming pulse ~3.3-3.5V for a very short time (delay should be very small). 
+import microserial
+import functions
+import numpy as np
+# Test and features to add:
+# Forming Pulse, Endurance Test
+# Limits to each variable are as follows: When in Lin Voltage: 0-3.5V, Current:0-1A,
+# trig_count:should be very large, step: should be very small,delay should be very small micro or nano seconds
+# When working with Log: Voltage:Cant start at 0 and same stopping point, Current same thing,
+# Points: very large number, same with trig_count.
+# When working with custom: a list of values is needed to tell what amplitude pulse to send out.
+# Forming pulse ~3.3-3.5V for a very short time (delay should be very small).
 # Trig_count is dependent on how many pulses u want. =numofpulses*2
+# More limits: For log function trig count and points need to be the same number but for linear
+# trig count= (stop_voltage/step)-2. or Step = stop_voltage/trig_count. Need larger scale for trig count 100 not enough
+# Creating device and accepting inputs from the GUI
 
-##Creating device and accepting inputs from the GUI
 rm = pyvisa.ResourceManager()
 print(rm.list_resources())
 instrument = rm.open_resource('GPIB0::24::INSTR')  # Name of sourcemeter
 with open('values.json', 'r') as openfile:
-    saved_vals = json.load(openfile)
+    saved_vals = functions.json.load(openfile)
+column = saved_vals["device_x"]
+row = saved_vals["device_y"]
 
-##Test types
-"""def singleStaircase_Lin():
-    instrument.timeout = 10000
-    instrument.write("SYST:REM")
-    instrument.write('*RST')
-    instrument.write(f':SENS:CURR:PROT {saved_vals["current_compliance"]}')
-    instrument.write(f':SOUR:VOLT {saved_vals["source_voltage"]}')
-    instrument.write(f':SOUR:DEL {saved_vals["source_delay"]}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(f':SOUR:VOLT:STAR {saved_vals["source_voltage_start"]}')
-    instrument.write(f':SOUR:VOLT:STOP {saved_vals["source_voltage_stop"]}')
-    instrument.write(f':SOUR:VOLT:STEP {saved_vals["source_voltage_step"]}')
-    instrument.write(f':TRIG:COUN {saved_vals["trig_count"]}')
-    instrument.write(':OUTP ON')
-    measure_up = instrument.query(':READ?')
-    print(measure_up)
-    return measure_up"""
-
-def Staircase_Lin():
-    instrument.timeout = 10000
-    instrument.write("SYST:REM")
-    instrument.write('*RST')
-    instrument.write(f':SENS:CURR:PROT {saved_vals["current_compliance"]}')
-    instrument.write(f':SOUR:VOLT {saved_vals["source_voltage"]}')
-    instrument.write(f':SOUR:DEL {saved_vals["source_delay"]}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(f':SOUR:VOLT:STAR {saved_vals["source_voltage_start"]}')
-    instrument.write(f':SOUR:VOLT:STOP {saved_vals["source_voltage_stop"]}')
-    instrument.write(f':SOUR:VOLT:STEP {saved_vals["source_voltage_step"]}')
-    instrument.write(f':TRIG:COUN {saved_vals["trig_count"]}')
-    instrument.write(':OUTP ON')
-    measure_up = instrument.query(':READ?')
-    print(measure_up)
-    if ((saved_vals["is_up_down"])):
-        instrument.write('*RST')
-        instrument.write(f':SENS:CURR:PROT {saved_vals["current_compliance"]}')
-        instrument.write(f':SOUR:VOLT {saved_vals["source_voltage_stop"]}')
-        instrument.write(f':SOUR:DEL {saved_vals["source_delay"]}')
-        instrument.write(':SOUR:SWE:RANG BEST')
-        instrument.write(':SOUR:VOLT:MODE SWE')
-        instrument.write(':SOUR:SWE:SPAC LIN')
-        instrument.write(f':SOUR:VOLT:STAR {saved_vals["source_voltage_stop"]}')
-        instrument.write(f':SOUR:VOLT:STOP {saved_vals["source_voltage_start"]}')
-        instrument.write(f':SOUR:VOLT:STEP {saved_vals["source_voltage_step"]*-1}')
-        instrument.write(f':TRIG:COUN {saved_vals["trig_count"]}')
-        instrument.write(':OUTP ON')
-        measure_down = instrument.query(':READ?')
-        print(measure_down)
-        return measure_up, measure_down
-    else:
-        return measure_up
-##When working with log source voltage cannot be 0
-"""def singleStaircase_Log():
-    instrument.timeout = 10000
-    instrument.write("SYST:REM")
-    instrument.write('*RST')
-    instrument.write(f':SENS:CURR:PROT {saved_vals["current_compliance"]}')
-    instrument.write(f':SOUR:VOLT {saved_vals["source_voltage"]}')
-    instrument.write(f':SOUR:DEL {saved_vals["source_delay"]}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LOG')
-    instrument.write(f':SOUR:VOLT:STAR {saved_vals["source_voltage_start"]}')
-    instrument.write(f':SOUR:VOLT:STOP {saved_vals["source_voltage_stop"]}')
-    instrument.write(f':SOUR:SWE:POIN {saved_vals["log_num_steps"]}')
-    instrument.write(f':TRIG:COUN {saved_vals["trig_count"]}')
-    instrument.write(':OUTP ON')
-    measure_up = instrument.query(':READ?')
-    print(measure_up)
-    return measure_up"""
-
-def Staircase_Log():
-    instrument.timeout = 10000
-    instrument.write("SYST:REM")
-    instrument.write('*RST')
-    instrument.write(f':SENS:CURR:PROT {saved_vals["current_compliance"]}')
-    instrument.write(f':SOUR:VOLT {saved_vals["source_voltage"]}')
-    instrument.write(f':SOUR:DEL {saved_vals["source_delay"]}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LOG')
-    instrument.write(f':SOUR:VOLT:STAR {saved_vals["source_voltage_start"]}')
-    instrument.write(f':SOUR:VOLT:STOP {saved_vals["source_voltage_stop"]}')
-    instrument.write(f':SOUR:SWE:POIN {saved_vals["log_num_steps"]}')
-    instrument.write(f':TRIG:COUN {saved_vals["trig_count"]}')
-    instrument.write(':OUTP ON')
-    measure_up = instrument.query(':READ?')
-    print(measure_up)
-    if ((saved_vals["is_up_down"])):
-        instrument.write('*RST')
-        instrument.write(f':SENS:CURR:PROT {saved_vals["current_compliance"]}')
-        instrument.write(f':SOUR:VOLT {saved_vals["source_voltage_stop"]}')
-        instrument.write(f':SOUR:DEL {saved_vals["source_delay"]}')
-        instrument.write(':SOUR:SWE:RANG BEST')
-        instrument.write(':SOUR:VOLT:MODE SWE')
-        instrument.write(':SOUR:SWE:SPAC LOG')
-        instrument.write(f':SOUR:VOLT:STAR {saved_vals["source_voltage_stop"]}')
-        instrument.write(f':SOUR:VOLT:STOP {saved_vals["source_voltage_start"]}')
-        instrument.write(f':SOUR:SWE:POIN {saved_vals["log_num_steps"]}')
-        instrument.write(f':TRIG:COUN {saved_vals["trig_count"]}')
-        instrument.write(':OUTP ON')
-        measure_down = instrument.query(':READ?')
-        print(measure_down)
-        return measure_up, measure_down
-    else:
-        return measure_up
-## variables to grab from GUI: list of voltages
-def customStaircase():
-    instrument.timeout = 10000
-    instrument.write("SYST:REM")
-    instrument.write('*RST')
-    instrument.write(f':SENS:CURR:PROT {saved_vals["current_compliance"]}')
-    instrument.write(f':SOUR:VOLT {saved_vals["source_voltage"]}')
-    instrument.write('SOUR:SWE:RANG BEST')
-    instrument.write('SOUR:VOLT:MODE LIST')
-    instrument.write('SOUR:LIST:VOLT 3.5,0')
-    instrument.write(f':TRIG:COUN {saved_vals["trig_count"]}')
-    instrument.write('OUTP ON')
-    instrument.query(':READ?')
+data_stream = [0]*21
+# Creates 21 byte long data stream where the first and last values are 0x80 and 0x81 respectively 
+# and the second and third to last spots are the  row and columns and the rest are 0
+data_stream = functions.create_data_stream()
+print(data_stream)
+# Uncomment when trying to send information to the PCB
+microserial.serialExecution(data_stream)
 
 
-#Chooses what test to run and collects data
+# Chooses what test to run and collects data
 if (saved_vals["source_sweep_space"] == 'LIN'):
     if ((saved_vals["is_up_down"])):
-        measure_up, measure_down = Staircase_Lin()
+        measure_up, measure_down = functions.Staircase_Lin()
     else:
-        measure_up = Staircase_Lin()
+        measure_up = functions.Staircase_Lin()
 elif (saved_vals["source_sweep_space"] == 'LOG'):
     if ((saved_vals["is_up_down"])):
-        measure_up, measure_down = Staircase_Log()
+        measure_up, measure_down = functions.Staircase_Log()
     else:
-        measure_up = Staircase_Log()
-elif (saved_vals["source_sweep_space"]=='CUST'):
-    #When custom need to decide how many times the pulse will be active and what values they will be going to 
-    measure_up = customStaircase
+        measure_up = functions.Staircase_Log()
+elif (saved_vals["source_sweep_space"] == 'CUST'):
+    measure_up = functions.Staircase_custom()
+
 # Initialize arrays to store the values
 voltage = []
 current = []
 resistance = []
 timestamp = []
 status_word = []
-trueResistance = []
+true_resistance = []
+
 # Function to add values to the arrays
 def add_values_to_arrays(data_string):
     values = data_string.split(",")
@@ -177,7 +68,9 @@ def add_values_to_arrays(data_string):
         resistance.append(float(values[i+2].strip()))
         timestamp.append(values[i+3].strip())
         status_word.append(values[i+4].strip())
-# Chooses what type of staircase its working with and saves data into respective arrays
+
+
+# Chooses what type of test its working with and saves data into respective arrays
 if (saved_vals["source_sweep_space"] == 'LIN'):
     if (saved_vals["is_up_down"]):
         add_values_to_arrays(measure_up)
@@ -194,50 +87,79 @@ elif (saved_vals["source_sweep_space"] == 'LOG'):
     else:
         add_values_to_arrays(measure_up)
         testType = 'Logarithmic Single Staircase'
+
+#Calculates the resitance at every point
+true_resistance = np.divide(voltage, current)
+
+#Calculates the time of each data point starting at 0
+time = []
+first_time = float(timestamp[0])
+for element in timestamp:
+    current_time = float(element) - float(timestamp[0])
+    time.append(current_time)
+
 # Print the values
 print("Voltage:", voltage)
 print("Current:", current)
 print("Resistance:", resistance)
 print("Timestamp:", timestamp)
 print("Status Word:", status_word)
+print('Time: ', time)
+print("True_Resistance: ", true_resistance)
 
-for i in trueResistance:
-    trueResistance[i] = voltage[i]/current[i]
-
+# Function that sends pre created arrays to .csv file
 def arrays_to_csv(filename):
     # Create a list of headers for each column
     headers = ["Voltage", "Current", "Resistance",
-               "Timestamp", "Status Word",'trueResistance']
-
+               "Timestamp", "Status Word","Time","Calc Resistance"]
     # Combine the arrays into a list of rows
-    rows = zip(voltage, current, resistance, timestamp, status_word,trueResistance)
-
+    rows = zip(voltage, current, resistance, timestamp, status_word, time, true_resistance)
     # Open the CSV file and write the headers
     with open(filename, "w", newline="") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(headers)
         # Write each row to the CSV file
         writer.writerows(rows)
-##Need to collect which columns and rows were selected
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-output = f'{testType}_{timestamp}.csv'
-# Call the function to write the arrays to a CSV file
+
+# Grabs information from gui to name file
+date = datetime.now().strftime("%m%d%Y")
+##Only for my computer if on another computer this becomes irrelevant
+folder_path = rf"C:\Users\James\OneDrive\Desktop\SunyPoly\{date}"
+timestart = saved_vals["test_start_time"]
+chiplet_name = saved_vals["chiplet_name"]
+column = saved_vals["device_x"]
+row = saved_vals["device_y"]
+# Creates name for .csv file
+if os.path.exists(folder_path):
+    output = os.path.join(folder_path, f'Chip{chiplet_name}_Row{row}_Col{column}_{testType}_{timestart}.csv')
+else:
+    output = f'Chip{chiplet_name}_Row{row}_Col{column}_{testType}_{timestart}.csv'
+print(data_stream)
+# Creates .csv file
 arrays_to_csv(output)
+# Plot Creation
 fig, ax = plt.subplots()
 ax.plot(voltage, current, color='b')
-# Set x-axis and y-axis labels
 plt.xlabel('Voltage')
 plt.ylabel('Current')
-# Set plot title
-plt.title('IV Plot ' + testType)
-# Set grid lines
+plt.title(f'IV Plot Row:{row} Col:{column} ' + testType)
 ax.grid(True, linestyle='--', linewidth=0.5)
-# Add legend
 ax.legend(['IV Plot'], loc='best')
-# Set the tick label format to scientific notation for both x-axis and y-axis
 ax.ticklabel_format(style='sci', axis='both', scilimits=(0, 0))
-# Set plot margins
 plt.margins(0.1)
-# Display the plot
 plt.tight_layout()
+#Creates name of Graph and saves it to the file of the script
+if os.path.exists(folder_path):
+    save_path = os.path.join(folder_path, f'Chip{chiplet_name}_Row{row}_Col{column}_{testType}_{timestart}.png')
+else:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    save_path = os.path.join(script_dir, f'Chip{chiplet_name}_Row{row}_Col{column}_{testType}_{timestart}.png')
+plt.savefig(save_path)
+plt.show()
+plt.figure()
+plt.plot(time,true_resistance)
+plt.xlabel('Time')
+plt.ylabel('Resistance')
+plt.title('Resistance vs. Time')
+plt.grid(True)
 plt.show()
