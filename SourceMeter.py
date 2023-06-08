@@ -34,8 +34,8 @@ data_stream = [0]*21
 data_stream = functions.create_data_stream()
 print(data_stream)
 # Uncomment when trying to send information to the PCB
-microserial.serialExecution(data_stream)
-
+output = microserial.serialExecution(data_stream)
+print(output)
 
 # Chooses what test to run and collects data
 if (saved_vals["source_sweep_space"] == 'LIN'):
