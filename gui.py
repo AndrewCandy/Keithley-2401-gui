@@ -5,6 +5,12 @@ from datetime import datetime
 import json
 import re
 
+#TODO: create high and low accuracy modes for IV 
+#TODO: Automate trigger count calculation
+#TODO: Add multiple device functionality
+#TODO: Add test scheduling/cueing
+#TODO: Add Forming pulse functionality
+#TODO: Add Endurance test functionality
 
 # Create a class to contain the tkinter window
 class GUI():
@@ -48,7 +54,7 @@ class GUI():
         self._gen_test_choice = StringVar(self._root)
 
         # Variable to check if new tests were requested or if window was closed another way
-        self._testRequested = False
+        self._testRequested = []
 
         # Run functions to generate GUI
         self.iv_frame_create()
@@ -216,25 +222,25 @@ class GUI():
         # Create sliders and text entry points for numeric inputs
         src_voltage_label = Label(c, text='Source Voltage:')
         src_voltage_scale = Scale(c, variable=source_voltage, orient="horizontal",
-                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.00001, showvalue=0, 
+                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0, 
                                     tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]), command=checkSourceVoltage)
         src_voltage_entry = Entry(c, textvariable=source_voltage)
 
         src_delay_label = Label(c, text='Source delay:')
         src_delay_scale = Scale(c, variable=source_delay, orient="horizontal",
-                                    from_=source_delay_minmax[0], to=source_delay_minmax[1], resolution=0.00001, showvalue=0, 
+                                    from_=source_delay_minmax[0], to=source_delay_minmax[1], resolution=0.01, showvalue=0, 
                                     tickinterval=(source_delay_minmax[1]-source_delay_minmax[0]), command=checkSourceDelay)
         src_delay_entry = Entry(c, textvariable=source_delay)
 
         src_voltage_start_label = Label(c, text='Source Voltage Start:')
         src_voltage_start_scale = Scale(c, variable=source_voltage_start, orient="horizontal",
-                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.00001, showvalue=0, 
+                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0, 
                                     tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]), command=checkVoltageStart)
         src_voltage_start_entry = Entry(c, textvariable=source_voltage_start)
 
         src_voltage_stop_label = Label(c, text='Source Voltage Stop:')
         src_voltage_stop_scale = Scale(c, variable=source_voltage_stop, orient="horizontal",
-                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.00001, showvalue=0, 
+                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0, 
                                     tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]), command=checkVoltageStop)
         src_voltage_stop_entry = Entry(c, textvariable=source_voltage_stop)
 
@@ -498,16 +504,15 @@ class GUI():
         test_choice_3.grid(column=8, row=7)
 
         button.grid(column=6, columnspan=3, row=9)
-
-
-    # Function for when run button is pressed
+    
     def set_values(self):
         '''
+        Run whenever run button on GUI is pressed
         Reads all values from GUI, saves all values to json file if filled out
         or informs user information is missing
         '''
         # When the run button is hit, show that a test was requested
-        self._testRequested = True
+        self._testRequested.append(self._gen_test_choice.get())
 
         dictionary = {
             # Generics
@@ -544,14 +549,11 @@ class GUI():
 
         self._root.destroy()
 
-    def isTestRequested(self):
-        return self._testRequested
+    def requested_tests(self):
+        '''
+        Returns a list of tests in order to be conducted
+        '''
+        return self._testRequested 
 
-
-gui = GUI()
-
-gui.gui_start()
-
-print(gui.isTestRequested())
-
-
+# gui = GUI()
+# gui.gui_start()

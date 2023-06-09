@@ -1,9 +1,7 @@
 import pyvisa
 import csv
 import matplotlib.pyplot as plt
-import os
-from datetime import datetime
-import time
+import gui
 import microserial
 import functions
 import numpy as np
@@ -19,147 +17,259 @@ import numpy as np
 # More limits: For log function trig count and points need to be the same number but for linear
 # trig count= (stop_voltage/step)-2. or Step = stop_voltage/trig_count. Need larger scale for trig count 100 not enough
 # Creating device and accepting inputs from the GUI
+class SourceMeter():
+    """
+    Class containing all code used to interact with source meter, microcontroller, and GUI
+    """
 
-rm = pyvisa.ResourceManager()
-print(rm.list_resources())
-instrument = rm.open_resource('GPIB0::24::INSTR')  # Name of sourcemeter
-with open('values.json', 'r') as openfile:
-    saved_vals = functions.json.load(openfile)
-column = saved_vals["device_x"]
-row = saved_vals["device_y"]
+    def __init__(self):
+        '''
+        
+        '''
+        # Connect to source Meter
+        rm = pyvisa.ResourceManager()
+        # print(rm.list_resources())
+        self._instrument = rm.open_resource('GPIB0::24::INSTR')  # Name of sourcemeter
 
-data_stream = [0]*21
-# Creates 21 byte long data stream where the first and last values are 0x80 and 0x81 respectively 
-# and the second and third to last spots are the  row and columns and the rest are 0
-data_stream = functions.create_data_stream()
-print(data_stream)
-# Uncomment when trying to send information to the PCB
-microserial.serialExecution(data_stream)
+        # Call GUI
+        self._gui = gui.GUI()
+        self._gui.gui_start()
 
+        # Create place to store collected data
+        self._measurements = []
+        self._voltage = []
+        self._current = []
+        self._resistance = []
+        self._timestamp = []
+        self._status_word = []
+        self._true_resistance = []
 
-# Chooses what test to run and collects data
-if (saved_vals["source_sweep_space"] == 'LIN'):
-    if ((saved_vals["is_up_down"])):
-        measure_up, measure_down = functions.Staircase_Lin()
-    else:
-        measure_up = functions.Staircase_Lin()
-elif (saved_vals["source_sweep_space"] == 'LOG'):
-    if ((saved_vals["is_up_down"])):
-        measure_up, measure_down = functions.Staircase_Log()
-    else:
-        measure_up = functions.Staircase_Log()
-elif (saved_vals["source_sweep_space"] == 'CUST'):
-    measure_up = functions.Staircase_custom()
+    def run_test(self):
+        '''
+        Run all tests requested by the GUI
+        Commands to be sent to the source meter are written out in functions.py
+        values are passed through from GUI to source meter commands
+        '''
+        testList = self._gui.requested_tests()
+        # Check to make sure at least one test has been requested
+        if len(testList) == 0:
+            return
+        
+        # if test(s) have been requested, execute them
+        vals = self.read_values()
+        for test in testList:
+            # Tell microcontroller what device we are targeting
+            message_micro(vals["gen_device_x"], vals["gen_device_y"])
+            match test:
+                case "IV Test":
+                    # Chooses what test to run and collects data
+                    if (vals["iv_space"] == 'LIN'):
+                        self._measurements.append(functions.Staircase_Lin(
+                            instrument=self._instrument,
+                            is_up_down=vals["iv_is_up_down"],
+                            current_compliance=vals["iv_current_compliance"],
+                            source_voltage=vals["iv_source_voltage"],
+                            source_delay=vals["iv_source_delay"],
+                            source_voltage_start=vals["iv_source_voltage_start"],
+                            source_voltage_stop=vals["iv_source_voltage_stop"],
+                            log_num_steps=vals["iv_log_num_steps"],
+                            trig_count=vals["iv_trig_count"]
+                            )
+                        )
+                    elif (vals["iv_space"] == 'LOG'):
+                        self._measurements.append(functions.Staircase_Log(
+                            instrument=self._instrument,
+                            is_up_down=vals["iv_is_up_down"],
+                            current_compliance=vals["iv_current_compliance"],
+                            source_voltage=vals["iv_source_voltage"],
+                            source_delay=vals["iv_source_delay"],
+                            source_voltage_start=vals["iv_source_voltage_start"],
+                            source_voltage_stop=vals["iv_source_voltage_stop"],
+                            log_num_steps=vals["iv_log_num_steps"],
+                            trig_count=vals["iv_trig_count"]
+                            )
+                        )
+                    # elif (saved_vals["source_sweep_space"] == 'CUST'):
+                    #     measure_up = functions.Staircase_custom()
+                case "Forming Pulse":
+                    print("Test not yet implemented")
+                case "Endurance Test":
+                    print("Test not yet implemented")
+                case _:
+                    print("Invalid test type selected, how'd you manage that?")
 
-# Initialize arrays to store the values
-voltage = []
-current = []
-resistance = []
-timestamp = []
-status_word = []
-true_resistance = []
+    def read_values(self):
+        '''
+        Pull values from json file for tests
+        Returns dict of values from GUI
+        '''
+        with open('values.json', 'r') as openfile:
+            saved_vals = functions.json.load(openfile)
 
-# Function to add values to the arrays
-def add_values_to_arrays(data_string):
-    values = data_string.split(",")
-    for i in range(0, len(values), 5):
-        voltage.append(float(values[i].strip()))
-        current.append(float(values[i+1].strip()))
-        resistance.append(float(values[i+2].strip()))
-        timestamp.append(values[i+3].strip())
-        status_word.append(values[i+4].strip())
+        return saved_vals
 
+    def data_breakout(self):
+        '''
+        Takes data collected from tests and separates the different values for
+        easier graphing
+        '''
+        for data_string in self._measurements:
+            values = data_string.split(",")
+            temp_voltage = []
+            temp_current = []
+            temp_resistance = []
+            temp_time = []
+            temp_status = []
+            for i in range(0, len(values), 5):
+                temp_voltage.append(float(values[i].strip()))
+                temp_current.append(float(values[i+1].strip()))
+                temp_resistance.append(float(values[i+2].strip()))
+                temp_time.append(float(values[i+3].strip()))
+                temp_status.append(values[i+4].strip())
+            
+            first_time = temp_time[0]
+            temp_time = temp_time - first_time
 
-# Chooses what type of test its working with and saves data into respective arrays
-if (saved_vals["source_sweep_space"] == 'LIN'):
-    if (saved_vals["is_up_down"]):
-        add_values_to_arrays(measure_up)
-        add_values_to_arrays(measure_down)
-        testType = 'Linear Double Staircase'
-    else:
-        add_values_to_arrays(measure_up)
-        testType = 'Linear Single Staircase'
-elif (saved_vals["source_sweep_space"] == 'LOG'):
-    if (saved_vals["is_up_down"]):
-        add_values_to_arrays(measure_up)
-        add_values_to_arrays(measure_down)
-        testType = 'Logarithmic Double Staircase'
-    else:
-        add_values_to_arrays(measure_up)
-        testType = 'Logarithmic Single Staircase'
+            self._voltage.append(temp_voltage)
+            self._current.append(temp_current)
+            self._resistance.append(temp_resistance)
+            self._timestamp.append(temp_time)
+            self._status_word.append(temp_status)
+            self._true_resistance.append(np.divide(temp_voltage,temp_current))
 
-#Calculates the resitance at every point
-true_resistance = np.divide(voltage, current)
+    def print_all_vals(self):
+        '''
+        
+        '''
+        #TODO: Make do what a normal person would expect
+        print("Voltage:", self._voltage)
+        print("Current:", self._current)
+        print("Resistance:", self._resistance)
+        print("Timestamp:", self._timestamp)
+        print("Status Word:", self._status_word)
+        print("True_Resistance: ", self._true_resistance)
 
-#Calculates the time of each data point starting at 0
-time = []
-first_time = float(timestamp[0])
-for element in timestamp:
-    current_time = float(element) - float(timestamp[0])
-    time.append(current_time)
+    def write_test_types(self):
+        '''
+        Returns:
+            a list of strings describing conducted tests to be used in making file names
+        '''
+        test_types = []
+        testList = self._gui.requested_tests()
+        for test in testList:
+            # Create test name for file naming
+            test_type = ""
+            vals = self.read_values()
+            match test:
+                case "IV Test":
+                    # Lin or log
+                    if vals["iv_space"] == 'LIN':
+                        test_type += "Linear_"
+                    elif vals["iv_space"] == 'LOG':
+                        test_type += "Logarithmic_"
+                    # Single or double staircase
+                    if vals["iv_is_up_down"]:
+                        test_type += "Double_"
+                    else:
+                        test_type += "Single_"
+                    # Show it was an IV
+                    test_type += "Staircase_IV_"
+                case "Forming Pulse":
+                    test_type += "Forming_"
+                case "Endurance Test":
+                    test_type += "Endurance_"
+                case _:
+                    test_type += "Unknown_Test_"
+            test_types.append(test_type)
+        return test_types
 
-# Print the values
-print("Voltage:", voltage)
-print("Current:", current)
-print("Resistance:", resistance)
-print("Timestamp:", timestamp)
-print("Status Word:", status_word)
-print('Time: ', time)
-print("True_Resistance: ", true_resistance)
+    def write_file_names(self):
+        '''
+        Returns:
+            A list of full filenames for saving files
+        '''
+        filenames = []
+        test_types = self.write_test_types()
+        for test in test_types:
+            vals = self.read_values()
+            # Create the filename
+            ## For James' computer if on another computer this becomes irrelevant
+            # folder_path = rf"C:\Users\James\OneDrive\Desktop\SunyPoly\{date}"
+            filename = f'*/SavedData/{vals["gen_chiplet_name"]}_Row{vals["gen_device_y"]}_Col{
+                        vals["gen_device_x"]}_{test}_{vals["test_start_time"]}'
+            filenames.append(filename)
+        return filenames
 
-# Function that sends pre created arrays to .csv file
-def arrays_to_csv(filename):
-    # Create a list of headers for each column
-    headers = ["Voltage", "Current", "Resistance",
-               "Timestamp", "Status Word","Time","Calc Resistance"]
-    # Combine the arrays into a list of rows
-    rows = zip(voltage, current, resistance, timestamp, status_word, time, true_resistance)
-    # Open the CSV file and write the headers
-    with open(filename, "w", newline="") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(headers)
-        # Write each row to the CSV file
-        writer.writerows(rows)
+    def save_to_csv(self):
+        '''
+        Saves data from each test in a csv file
+        '''
+        filenames = self.write_file_names()
+        for i in range(len(filenames)):
+            vals = self.read_values()
+            # Add .csv to the filename
+            filename = filenames[i] + ".csv"
 
-# Grabs information from gui to name file
-date = datetime.now().strftime("%m%d%Y")
-##Only for my computer if on another computer this becomes irrelevant
-folder_path = rf"C:\Users\James\OneDrive\Desktop\SunyPoly\{date}"
-timestart = saved_vals["test_start_time"]
-chiplet_name = saved_vals["chiplet_name"]
-column = saved_vals["device_x"]
-row = saved_vals["device_y"]
-# Creates name for .csv file
-if os.path.exists(folder_path):
-    output = os.path.join(folder_path, f'Chip{chiplet_name}_Row{row}_Col{column}_{testType}_{timestart}.csv')
-else:
-    output = f'Chip{chiplet_name}_Row{row}_Col{column}_{testType}_{timestart}.csv'
-print(data_stream)
-# Creates .csv file
-arrays_to_csv(output)
-# Plot Creation
-fig, ax = plt.subplots()
-ax.plot(voltage, current, color='b')
-plt.xlabel('Voltage')
-plt.ylabel('Current')
-plt.title(f'IV Plot Row:{row} Col:{column} ' + testType)
-ax.grid(True, linestyle='--', linewidth=0.5)
-ax.legend(['IV Plot'], loc='best')
-ax.ticklabel_format(style='sci', axis='both', scilimits=(0, 0))
-plt.margins(0.1)
-plt.tight_layout()
-#Creates name of Graph and saves it to the file of the script
-if os.path.exists(folder_path):
-    save_path = os.path.join(folder_path, f'Chip{chiplet_name}_Row{row}_Col{column}_{testType}_{timestart}.png')
-else:
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    save_path = os.path.join(script_dir, f'Chip{chiplet_name}_Row{row}_Col{column}_{testType}_{timestart}.png')
-plt.savefig(save_path)
-plt.show()
-plt.figure()
-plt.plot(time,true_resistance)
-plt.xlabel('Time')
-plt.ylabel('Resistance')
-plt.title('Resistance vs. Time')
-plt.grid(True)
-plt.show()
+            # Create a list of headers for each column
+            headers = ["Voltage", "Current", "Resistance",
+                    "Timestamp", "Status Word","Calc Resistance"]
+            # Combine the arrays into a list of rows
+            rows = zip(self._voltage[i], self._current[i], self._resistance[i],
+                    self._timestamp[i], self._status_word[i], self._true_resistance[i])
+            # Open the CSV file and write the headers
+            with open(filename, "w", newline="") as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(headers)
+                # Write each row to the CSV file
+                writer.writerows(rows)
+
+    def plot_tests(self):
+        filenames = self.write_file_names()
+        for i in range(len(filenames)):
+            vals = self.read_values()
+            # Add .png to the filename
+            filename = filenames[i] + ".png"
+            
+            # Create IV graph
+            fig, ax = plt.subplots()
+            ax.plot(self._voltage[i], self._current[i], color='b')
+            plt.xlabel('Voltage')
+            plt.ylabel('Current')
+            plt.title(f'IV Plot Row:{vals["gen_device_y"]} Col:{vals["gen_device_x"]}')
+            ax.grid(True, linestyle='--', linewidth=0.5)
+            ax.legend(['IV Plot'], loc='best')
+            ax.ticklabel_format(style='sci', axis='both', scilimits=(0, 0))
+            plt.margins(0.1)
+            plt.tight_layout()
+            plt.savefig(filename)
+
+            # Create R over time graph
+            plt.show()
+            plt.figure()
+            plt.plot(self._timestamp[i], self._true_resistance[i])
+            plt.xlabel('Time')
+            plt.ylabel('Resistance')
+            plt.title('Resistance vs. Time')
+            plt.grid(True)
+            plt.show()
+
+def message_micro(x, y):
+    '''
+    Sends a 21 byte long datastream to microcontroller containing the xy
+    coords of the device we are attempting to work with
+    '''
+    data_stream = [0]*21
+    # Creates 21 byte long data stream where the first and last values are
+    # 0x80 and 0x81 respectively and the second and third to last spots are
+    # the  row and columns and the rest are 0
+    data_stream = functions.create_data_stream(x, y)
+    # print(data_stream)
+    # Uncomment when trying to send information to the PCB
+    output = microserial.serialExecution(data_stream)
+    # print(output)
+
+sm = SourceMeter()
+sm.run_test()
+sm.data_breakout()
+sm.save_to_csv()
+# sm.plot_tests()
