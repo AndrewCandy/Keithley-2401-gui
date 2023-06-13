@@ -1,10 +1,12 @@
 import pyvisa
 import csv
 import matplotlib.pyplot as plt
+import math
 import gui
 import microserial
 import functions
 import numpy as np
+import pandas as pd
 # Test and features to add:
 # Forming Pulse, Endurance Test
 # Limits to each variable are as follows: When in Lin Voltage: 0-3.5V, Current:0-1A,
@@ -13,9 +15,6 @@ import numpy as np
 # Points: very large number, same with trig_count.
 # When working with custom: a list of values is needed to tell what amplitude pulse to send out.
 # Forming pulse ~3.3-3.5V for a very short time (delay should be very small).
-# Trig_count is dependent on how many pulses u want. =numofpulses*2
-# More limits: For log function trig count and points need to be the same number but for linear
-# trig count= (stop_voltage/step)-2. or Step = stop_voltage/trig_count. Need larger scale for trig count 100 not enough
 # Creating device and accepting inputs from the GUI
 class SourceMeter():
     """
@@ -36,6 +35,7 @@ class SourceMeter():
         self._gui.gui_start()
 
         # Create place to store collected data
+        self._repitions = 2
         self._measurements = []
         self._voltage = []
         self._current = []
@@ -59,24 +59,37 @@ class SourceMeter():
         vals = self.read_values()
         for test in testList:
             # Tell microcontroller what device we are targeting
-            message_micro(vals["gen_device_x"], vals["gen_device_y"])
+            #microserial.message_micro(vals["gen_device_x"], vals["gen_device_y"])
             match test:
                 case "IV Test":
                     # Chooses what test to run and collects data
                     if (vals["iv_space"] == 'LIN'):
+                        vals['iv_log_num_steps'] = ''
+                        trig_Count = functions.calcTrigCount(vals['iv_source_voltage_stop'],
+                                             vals['iv_source_voltage_start'],
+                                             vals['iv_source_voltage_step'],
+                                             vals['iv_log_num_steps'],
+                                             vals['iv_space'])
                         self._measurements.append(functions.Staircase_Lin(
                             instrument=self._instrument,
                             is_up_down=vals["iv_is_up_down"],
+                            full_cycle=vals["iv_full_cycle"],
                             current_compliance=vals["iv_current_compliance"],
                             source_voltage=vals["iv_source_voltage"],
                             source_delay=vals["iv_source_delay"],
                             source_voltage_start=vals["iv_source_voltage_start"],
                             source_voltage_stop=vals["iv_source_voltage_stop"],
-                            log_num_steps=vals["iv_log_num_steps"],
-                            trig_count=vals["iv_trig_count"]
+                            source_voltage_step=vals["iv_source_voltage_step"],
+                            trig_count=math.floor(trig_Count)
                             )
                         )
                     elif (vals["iv_space"] == 'LOG'):
+                        vals['iv_source_voltage_step'] = ''
+                        trig_Count = functions.calcTrigCount(vals['iv_source_voltage_stop'],
+                                             vals['iv_source_voltage_start'],
+                                             vals['iv_source_voltage_step'],
+                                             vals['iv_log_num_steps'],
+                                             vals['iv_space'])
                         self._measurements.append(functions.Staircase_Log(
                             instrument=self._instrument,
                             is_up_down=vals["iv_is_up_down"],
@@ -86,15 +99,33 @@ class SourceMeter():
                             source_voltage_start=vals["iv_source_voltage_start"],
                             source_voltage_stop=vals["iv_source_voltage_stop"],
                             log_num_steps=vals["iv_log_num_steps"],
-                            trig_count=vals["iv_trig_count"]
+                            trig_count=math.floor(trig_Count)
                             )
                         )
-                    # elif (saved_vals["source_sweep_space"] == 'CUST'):
-                    #     measure_up = functions.Staircase_custom()
-                case "Forming Pulse":
-                    print("Test not yet implemented")
                 case "Endurance Test":
-                    print("Test not yet implemented")
+                    self._voltage_list = functions.create_voltage_list(
+                        set_voltage=vals["set_voltage"],
+                        read_voltage=vals["read_voltage"],
+                        reset_voltage=vals["reset_voltage"],
+                        cycles=vals["et_cycles"]
+                    )
+                    for i in range(0, vals["et_cycles"], 5):
+                        self._measurements.append(functions.endurance_Test(
+                            instrument=self._instrument,
+                            current_compliance=vals["iv_current_compliance"],
+                            source_voltage=vals["iv_source_voltage"],
+                            source_delay=vals["iv_source_delay"],
+                            voltage_list=self._voltage_list, 
+                            list_length=vals["et_cycles"]*8
+                            )   
+                        )
+                        print(i)
+                        #print("Measure: " + str(self._measurements))
+                        df = pd.DataFrame(self._measurements)
+                        values = df['self._measurements'].str.split(',', expand=False).tolist()
+                        reshaped_values = np.reshape(values, (-1, 5))
+                        df_new = pd.DataFrame(reshaped_values, columns=['col1', 'col2', 'col3', 'col4', 'col5'])
+                        print(df_new.head())
                 case _:
                     print("Invalid test type selected, how'd you manage that?")
 
@@ -104,7 +135,7 @@ class SourceMeter():
         Returns dict of values from GUI
         '''
         with open('values.json', 'r') as openfile:
-            saved_vals = functions.json.load(openfile)
+            saved_vals = gui.json.load(openfile)
 
         return saved_vals
 
@@ -114,21 +145,25 @@ class SourceMeter():
         easier graphing
         '''
         for data_string in self._measurements:
-            values = data_string.split(",")
-            temp_voltage = []
-            temp_current = []
-            temp_resistance = []
-            temp_time = []
-            temp_status = []
-            for i in range(0, len(values), 5):
-                temp_voltage.append(float(values[i].strip()))
-                temp_current.append(float(values[i+1].strip()))
-                temp_resistance.append(float(values[i+2].strip()))
-                temp_time.append(float(values[i+3].strip()))
-                temp_status.append(values[i+4].strip())
-            
-            first_time = temp_time[0]
-            temp_time = temp_time - first_time
+            for i in range(len(data_string)):
+                values = data_string.split(",")
+                temp_voltage = []
+                temp_current = []
+                temp_resistance = []
+                time_stamp = []
+                temp_status = []
+                temp_time = []
+                for i in range(0, len(values), 5):
+                    temp_voltage.append(float(values[i].strip()))
+                    temp_current.append(float(values[i+1].strip()))
+                    temp_resistance.append(float(values[i+2].strip()))
+                    time_stamp.append(float(values[i+3].strip()))
+                    temp_status.append(values[i+4].strip())
+
+        first_time = float(time_stamp[0])
+        for element in time_stamp:
+            current_time = float(element) - first_time
+            temp_time.append(current_time)
 
             self._voltage.append(temp_voltage)
             self._current.append(temp_current)
@@ -174,8 +209,6 @@ class SourceMeter():
                         test_type += "Single_"
                     # Show it was an IV
                     test_type += "Staircase_IV_"
-                case "Forming Pulse":
-                    test_type += "Forming_"
                 case "Endurance Test":
                     test_type += "Endurance_"
                 case _:
@@ -193,13 +226,14 @@ class SourceMeter():
         for test in test_types:
             vals = self.read_values()
             # Create the filename
-            ## For James' computer if on another computer this becomes irrelevant
-            # folder_path = rf"C:\Users\James\OneDrive\Desktop\SunyPoly\{date}"
-            filename = f'*/SavedData/{vals["gen_chiplet_name"]}_Row{vals["gen_device_y"]}_Col{
-                        vals["gen_device_x"]}_{test}_{vals["test_start_time"]}'
+            filename = f'SavedData/{vals["gen_chiplet_name"]}_Row{vals["gen_device_y"]}_Col{vals["gen_device_x"]}_{test}_{vals["test_start_time"]}'
             filenames.append(filename)
         return filenames
-
+    def create_dataframe(self):
+        print("hi" + self._measurements)
+        df = pd.DataFrame(self._measurements)
+        print(df.head(10))
+        return df
     def save_to_csv(self):
         '''
         Saves data from each test in a csv file
@@ -228,7 +262,7 @@ class SourceMeter():
         for i in range(len(filenames)):
             vals = self.read_values()
             # Add .png to the filename
-            filename = filenames[i] + ".png"
+            
             
             # Create IV graph
             fig, ax = plt.subplots()
@@ -241,23 +275,22 @@ class SourceMeter():
             ax.ticklabel_format(style='sci', axis='both', scilimits=(0, 0))
             plt.margins(0.1)
             plt.tight_layout()
-            plt.savefig(filename)
 
-            # Create R over time graph
+            # Create I over time graph
             plt.show()
             plt.figure()
-            plt.plot(self._timestamp[i], self._true_resistance[i])
+            plt.plot(self._timestamp[i], self._current[i])
             plt.xlabel('Time')
-            plt.ylabel('Resistance')
-            plt.title('Resistance vs. Time')
+            plt.ylabel('Current')
+            plt.title('Current vs. Time')
             plt.grid(True)
             plt.show()
 
-def message_micro(x, y):
-    '''
-    Sends a 21 byte long datastream to microcontroller containing the xy
-    coords of the device we are attempting to work with
-    '''
+'''def message_micro(x, y):
+    
+    #Sends a 21 byte long datastream to microcontroller containing the xy
+    #coords of the device we are attempting to work with
+    
     data_stream = [0]*21
     # Creates 21 byte long data stream where the first and last values are
     # 0x80 and 0x81 respectively and the second and third to last spots are
@@ -267,9 +300,12 @@ def message_micro(x, y):
     # Uncomment when trying to send information to the PCB
     output = microserial.serialExecution(data_stream)
     # print(output)
-
+'''
 sm = SourceMeter()
 sm.run_test()
 sm.data_breakout()
-sm.save_to_csv()
-# sm.plot_tests()
+sm.create_dataframe
+
+#sm.plot_tests()
+
+
