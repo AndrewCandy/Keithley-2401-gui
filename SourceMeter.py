@@ -195,7 +195,7 @@ class SourceMeter():
             # Create the filename
             ## For James' computer if on another computer this becomes irrelevant
             # folder_path = rf"C:\Users\James\OneDrive\Desktop\SunyPoly\{date}"
-            filename = f'*/SavedData/{vals["gen_chiplet_name"]}_Row{vals["gen_device_y"]}_Col{
+            filename = f'*/SavedData/{vals["gen_chiplet_name"]}_Row{vals["gen_device_y"]}_Col{ \
                         vals["gen_device_x"]}_{test}_{vals["test_start_time"]}'
             filenames.append(filename)
         return filenames
@@ -265,11 +265,11 @@ def message_micro(x, y):
     data_stream = functions.create_data_stream(x, y)
     # print(data_stream)
     # Uncomment when trying to send information to the PCB
-    output = microserial.serialExecution(data_stream)
+    microserial.serialExecution(data_stream) #TEMP: removed output because comms is currently one way
     # print(output)
 
 sm = SourceMeter()
 sm.run_test()
 sm.data_breakout()
 sm.save_to_csv()
-# sm.plot_tests()
+sm.plot_tests()
