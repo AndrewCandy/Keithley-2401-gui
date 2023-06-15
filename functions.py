@@ -271,7 +271,7 @@ def endurance_Test(instrument, current_compliance, source_voltage, source_delay,
     instrument.write(f':SOUR:LIST:VOLT {voltage_list}')
     instrument.write(f':TRIG:COUN {list_length}')
     instrument.write(':OUTP ON')
-    measure = (instrument.query(':READ?'))
+    measure = (instrument.query(':READ?'))[:-1]
     return measure
 
 def create_voltage_list(set_voltage, read_voltage, reset_voltage, cycles):
