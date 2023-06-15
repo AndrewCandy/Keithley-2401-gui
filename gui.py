@@ -76,8 +76,8 @@ class GUI():
         # self.iv_frame_create()
         # self.fp_frame_create()
         # self.et_frame_create()
-        self.device_select_frame_create(self._root)
-        self.gui_common_params()
+        # self.device_select_frame_create(self._root)
+        self.gui_main_window()
 
     def gui_start(self):
         '''
@@ -91,21 +91,20 @@ class GUI():
         '''
         # Redefine variables
         source_voltage = self._iv_source_voltage
-        source_voltage_minmax = [0.0, 3.5]
         source_delay = self._iv_source_delay
-        source_delay_minmax = [0.0, .25]
         source_voltage_start = self._iv_source_voltage_start
         source_voltage_stop = self._iv_source_voltage_stop
-        # When in LOG sweep space, num steps is used instead of voltage step
         num_steps = self._iv_num_steps
-        num_steps_minmax = [1, 100]
         current_compliance = self._iv_current_compliance
-        current_minmax = [0.0, 1.0]
         is_up_down = self._iv_is_up_down
         accuracy = self._iv_accuracy
         rangename = self._iv_range
         modename = self._iv_mode
         spacename = self._iv_space
+        source_delay_minmax = [0.0, .25]
+        source_voltage_minmax = [0.0, 3.5]
+        current_minmax = [0.0, 0.01]
+        num_steps_minmax = [1, 100]
 
         # Create frame structure to place widgets in for IV Test
         c = ttk.Frame(window, padding=(12, 5, 12, 0))
@@ -130,7 +129,7 @@ class GUI():
                                   value="LOG")
 
         # Set starting values based on previous set values
-        def ivGetStartValues():
+        def get_start_values():
             try:  # Open JSON file if one exists, otherwise tell user no previous data available
                 with open('values.json', 'r') as openfile:
                     saved_vals = json.load(openfile)
@@ -150,69 +149,80 @@ class GUI():
             except:
                 print("Previous values not available.")
 
-        ivGetStartValues()
+        get_start_values()
 
-        '''
-        Functions to ensure no invalid data is sent from the GUI
-        an attempt at minimizing opportunities to fry our chiplets
-        '''
-        def checkSourceVoltage(*args):
-            sv = source_voltage.get()
-            if sv > source_voltage_minmax[1]:
-                source_voltage.set(source_voltage_minmax[1])
-            elif sv < source_voltage_minmax[0]:
-                source_voltage.set(source_voltage_minmax[0])
-            elif (spacename == 'LOG' and sv == source_voltage_minmax[0]):
-                source_voltage.set(source_voltage_minmax[0] + 0.00001)
+        # Functions to ensure no invalid data is sent from the GUI
+        # an attempt at minimizing opportunities to fry our chiplets
 
-        def checkSourceDelay(*args):
-            sd = source_delay.get()
-            if sd > source_delay_minmax[1]:
-                source_delay.set(source_delay_minmax[1])
-            elif sd <= source_delay_minmax[0]:
-                source_delay.set(source_delay_minmax[0])
+        # def check_source_voltage(*args):
+        #     '''
+        #     '''
+        #     sv = source_voltage.get()
+        #     if sv > source_voltage_minmax[1]:
+        #         source_voltage.set(source_voltage_minmax[1])
+        #     elif sv < source_voltage_minmax[0]:
+        #         source_voltage.set(source_voltage_minmax[0])
+        #     elif (spacename == 'LOG' and sv == source_voltage_minmax[0]):
+        #         source_voltage.set(source_voltage_minmax[0] + 0.00001)
 
-        def checkVoltageStart(*args):
-            svs = source_voltage_start.get()
-            if svs > source_voltage_minmax[1]:
-                source_voltage_start.set(source_voltage_minmax[1])
-            elif svs < source_voltage_minmax[0]:
-                source_voltage_start.set(source_voltage_minmax[0])
-            elif (spacename == 'LOG' and svs == source_voltage_minmax[0]):
-                source_voltage_start.set(source_voltage_minmax[0] + 0.00001)
+        # def check_source_delay(*args):
+        #     '''
+        #     '''
+        #     sd = source_delay.get()
+        #     if sd > source_delay_minmax[1]:
+        #         source_delay.set(source_delay_minmax[1])
+        #     elif sd <= source_delay_minmax[0]:
+        #         source_delay.set(source_delay_minmax[0])
 
-        def checkVoltageStop(*args):
-            svs = source_voltage_stop.get()
-            if svs > source_voltage_minmax[1]:
-                source_voltage_stop.set(source_voltage_minmax[1])
-            elif svs < source_voltage_minmax[0]:
-                source_voltage_stop.set(source_voltage_minmax[0])
-            elif (spacename == 'LOG' and svs == source_voltage_minmax[0]):
-                source_voltage_stop.set(source_voltage_minmax[0] + 0.00001)
+        # def check_voltage_start(*args):
+        #     '''
+        #     '''
+        #     svs = source_voltage_start.get()
+        #     if svs > source_voltage_minmax[1]:
+        #         source_voltage_start.set(source_voltage_minmax[1])
+        #     elif svs < source_voltage_minmax[0]:
+        #         source_voltage_start.set(source_voltage_minmax[0])
+        #     elif (spacename == 'LOG' and svs == source_voltage_minmax[0]):
+        #         source_voltage_start.set(source_voltage_minmax[0] + 0.00001)
 
-        def checkNumSteps(*args):
-            ns = num_steps.get()
-            if ns > num_steps_minmax[1]:
-                num_steps.set(num_steps_minmax[1])
-            elif ns < num_steps_minmax[0]:
-                num_steps.set(num_steps_minmax[0])
+        # def check_voltage_stop(*args):
+        #     '''
+        #     '''
+        #     svs = source_voltage_stop.get()
+        #     if svs > source_voltage_minmax[1]:
+        #         source_voltage_stop.set(source_voltage_minmax[1])
+        #     elif svs < source_voltage_minmax[0]:
+        #         source_voltage_stop.set(source_voltage_minmax[0])
+        #     elif (spacename == 'LOG' and svs == source_voltage_minmax[0]):
+        #         source_voltage_stop.set(source_voltage_minmax[0] + 0.00001)
 
-        def checkCurrent(*args):
-            cc = current_compliance.get()
-            if cc > current_minmax[1]:
-                current_compliance.set(current_minmax[1])
-            elif cc < current_minmax[0]:
-                current_compliance.set(current_minmax[0])
-            elif (spacename == 'LOG' and cc == current_minmax[0]):
-                current_compliance.set(current_minmax[0] + 0.00001)
+        # def check_num_steps(*args):
+        #     '''
+        #     '''
+        #     ns = num_steps.get()
+        #     if ns > num_steps_minmax[1]:
+        #         num_steps.set(num_steps_minmax[1])
+        #     elif ns < num_steps_minmax[0]:
+        #         num_steps.set(num_steps_minmax[0])
+
+        # def check_current(*args):
+        #     '''
+        #     '''
+        #     cc = current_compliance.get()
+        #     if cc > current_minmax[1]:
+        #         current_compliance.set(current_minmax[1])
+        #     elif cc < current_minmax[0]:
+        #         current_compliance.set(current_minmax[0])
+        #     elif (spacename == 'LOG' and cc == current_minmax[0]):
+        #         current_compliance.set(current_minmax[0] + 0.00001)
 
         # call value check functions whenever a value in the GUI changes
-        # source_voltage.trace_add('write', checkSourceVoltage)
-        # source_delay.trace_add('write', checkSourceDelay)
-        # source_voltage_start.trace_add('write', checkVoltageStart) # Turns out this is really annoying for entering values into the gui
-        # source_voltage_stop.trace_add('write', checkVoltageStop)
-        # num_steps.trace_add('write', checkNumSteps)
-        # current_compliance.trace_add('write', checkCurrent)
+        # source_voltage.trace_add('write', check_source_voltage)
+        # source_delay.trace_add('write', check_source_delay)
+        # source_voltage_start.trace_add('write', check_voltage_start) # Turns out this is really annoying for entering values into the gui
+        # source_voltage_stop.trace_add('write', check_voltage_stop)
+        # num_steps.trace_add('write', check_num_steps)
+        # current_compliance.trace_add('write', check_current)
 
         # Label the frame
         iv_test_label = Label(c, text="IV Test Parameters")
@@ -222,49 +232,49 @@ class GUI():
         src_voltage_label = Label(c, text='Source Voltage:')
         src_voltage_scale = Scale(c, variable=source_voltage, orient="horizontal",
                                   from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
-                                  tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]), command=checkSourceVoltage)
+                                  tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_source_voltage)
         src_voltage_entry = Entry(c, textvariable=source_voltage)
 
         src_delay_label = Label(c, text='Source delay:')
         src_delay_scale = Scale(c, variable=source_delay, orient="horizontal",
                                 from_=source_delay_minmax[0], to=source_delay_minmax[1], resolution=0.01, showvalue=0,
-                                tickinterval=(source_delay_minmax[1]-source_delay_minmax[0]), command=checkSourceDelay)
+                                tickinterval=(source_delay_minmax[1]-source_delay_minmax[0]))  # , command=check_source_delay)
         src_delay_entry = Entry(c, textvariable=source_delay)
 
         src_voltage_start_label = Label(c, text='Source Voltage Start:')
         src_voltage_start_scale = Scale(c, variable=source_voltage_start, orient="horizontal",
                                         from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
-                                        tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]), command=checkVoltageStart)
+                                        tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_voltage_start)
         src_voltage_start_entry = Entry(c, textvariable=source_voltage_start)
 
         src_voltage_stop_label = Label(c, text='Source Voltage Stop:')
         src_voltage_stop_scale = Scale(c, variable=source_voltage_stop, orient="horizontal",
                                        from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
-                                       tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]), command=checkVoltageStop)
+                                       tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_voltage_stop)
         src_voltage_stop_entry = Entry(c, textvariable=source_voltage_stop)
 
         num_steps_label = Label(c, text='Number of Steps:')
         num_steps_scale = Scale(c, variable=num_steps, orient="horizontal",
                                 from_=num_steps_minmax[0], to=num_steps_minmax[1], resolution=1, showvalue=0,
-                                tickinterval=(num_steps_minmax[1]-num_steps_minmax[0]), command=checkNumSteps)
+                                tickinterval=(num_steps_minmax[1]-num_steps_minmax[0]))  # , command=check_num_steps)
         num_steps_entry = Entry(c, textvariable=num_steps)
 
-        accuracy_label = Label(c, text='Number of Steps:')
+        accuracy_label = Label(c, text='Accuracy:')
         accuracy_scale = Scale(c, variable=num_steps, orient="horizontal",
-                               from_=0.01, to=10, resolution=.01, showvalue=0, tickinterval=.01)
+                               from_=0.01, to=10, resolution=.01, showvalue=0, tickinterval=(10-0.01))
         accuracy_entry = Entry(c, textvariable=num_steps)
 
         current_compliance_label = Label(c, text='Current Compliance:')
         current_compliance_scale = Scale(c, variable=current_compliance, orient="horizontal",
                                          from_=current_minmax[0], to=current_minmax[1], resolution=0.00001, showvalue=0,
-                                         tickinterval=(current_minmax[1]-current_minmax[0]), command=checkCurrent)
+                                         tickinterval=(current_minmax[1]-current_minmax[0]))  # , command=check_current)
         current_compliance_entry = Entry(c, textvariable=current_compliance)
 
         stairs_button_label = Label(c, text="Stairs up and down?")
         stairs_button = Checkbutton(c, variable=is_up_down, width=20)
 
-        # Place items in frame for IV test
-        def ivGridAssign():
+        # Place items in frame
+        def grid_assign():
             iv_test_label.grid(column=0, columnspan=5, row=0)
 
             sweep_range_label.grid(column=0, row=2)
@@ -316,7 +326,7 @@ class GUI():
             stairs_button_label.grid(column=4, row=5)
             stairs_button.grid(column=4, row=6)
 
-        ivGridAssign()
+        grid_assign()
 
         # def sweepSpaceChange(*args):
         #     if spacename == 'LOG':
@@ -359,7 +369,7 @@ class GUI():
     #     forming_iv = self._fp_forming_iv
 
     #     # Set starting values based on previous set values
-    #     def fpGetStartValues():
+    #     def fpget_start_values():
     #         try: # Open JSON file if one exists, otherwise tell user no previous data available
     #             with open('values.json', 'r') as openfile:
     #                 saved_vals = json.load(openfile)
@@ -376,7 +386,7 @@ class GUI():
     #         except:
     #             print("Previous values not available, no JSON file found.")
 
-    #     fpGetStartValues()
+    #     fpget_start_values()
 
     #     # Created frame for Forming pulse
     #     f = ttk.Frame(self._root, padding=(12, 5, 12, 0))
@@ -470,31 +480,123 @@ class GUI():
         Create and populate endurance test frame of GUI
 
         '''
+        # Redeclare variables
+        set_voltage = self._et_set_voltage
+        read_voltage = self._et_read_voltage
+        reset_voltage = self._et_reset_voltage
+        cycles = self._et_cycles
+        current_compliance = self._et_current_compliance
+        source_voltage = self._et_source_voltage
+        source_delay = self._et_source_delay
+        source_delay_minmax = [0.0, .25]
+        source_voltage_minmax = [0.0, 3.5]
+        current_minmax = [0.0, 0.01]
+        cycles_minmax = [5, 500]
+
+        def get_start_values():
+            '''
+            Attempts to collect most recent values to preset gui inputs
+            '''
+            try:  # Open JSON file if one exists, otherwise tell user no previous data available
+                with open('values.json', 'r') as openfile:
+                    saved_vals = json.load(openfile)
+
+                # Take previous values from JSON file and give everything a starting value
+                set_voltage.set(saved_vals["et_set_voltage"])
+                read_voltage.set(saved_vals["et_read_voltage"])
+                reset_voltage.set(saved_vals["et_reset_voltage"])
+                cycles.set(saved_vals["et_cycles"])
+                current_compliance.set(saved_vals["et_current_compliance"])
+                source_voltage.set(saved_vals["et_source_voltage"])
+                source_delay.set(saved_vals["et_source_delay"])
+            except:
+                print("Previous values not available.")
+
+        get_start_values()
+
         # Created frame for Endurance Test
-        t = ttk.Frame(window, padding=(12, 5, 12, 0))
-        t.grid(column=0, row=2, sticky=(N, W, E, S))
-        t.configure(borderwidth=5, relief='raised')
+        f = ttk.Frame(window, padding=(12, 5, 12, 0))
+        f.grid(column=0, row=0, sticky=(N, W, E, S))
+        f.configure(borderwidth=5, relief='raised')
 
         # Label the frame
-        et_test_label = Label(t, text="Endurance Test Parameters")
+        et_test_label = Label(f, text="Endurance Test Parameters")
         et_test_label.configure(font=("Arial", 28))
+        et_test_label.grid(column=0, columnspan=5, row=0)
 
         # Create Widgets for inputs
+        set_voltage_label = Label(f, text='Set Voltage:')
+        set_voltage_scale = Scale(f, variable=set_voltage, orient="horizontal",
+                                  from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=1, showvalue=0,
+                                  tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_num_steps)
+        set_voltage_entry = Entry(f, textvariable=set_voltage)
+        set_voltage_label.grid(column=0, row=1)
+        set_voltage_entry.grid(column=0, row=2)
+        set_voltage_scale.grid(column=0, row=3)
 
-        # Place items in Frame for Forming pulse
+        reset_voltage_label = Label(f, text='Reset Voltage:')
+        reset_voltage_scale = Scale(f, variable=reset_voltage, orient="horizontal",
+                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=1, showvalue=0,
+                                    tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_num_steps)
+        reset_voltage_entry = Entry(f, textvariable=reset_voltage)
+        reset_voltage_label.grid(column=0, row=4)
+        reset_voltage_entry.grid(column=0, row=5)
+        reset_voltage_scale.grid(column=0, row=6)
 
-        def etGridAssign():
-            et_test_label.grid(column=0, columnspan=5, row=0)
-        etGridAssign()
+        read_voltage_label = Label(f, text='Read Voltage:')
+        read_voltage_scale = Scale(f, variable=read_voltage, orient="horizontal",
+                                   from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
+                                   tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_num_steps)
+        read_voltage_entry = Entry(f, textvariable=read_voltage)
+        read_voltage_label.grid(column=0, row=7)
+        read_voltage_entry.grid(column=0, row=8)
+        read_voltage_scale.grid(column=0, row=9)
 
-    def device_select_frame_create(self, window):
+        cycles_label = Label(f, text='Number of Cycles:')
+        cycles_scale = Scale(f, variable=cycles, orient="horizontal",
+                             from_=cycles_minmax[0], to=cycles_minmax[1], resolution=5, showvalue=0,
+                             tickinterval=(cycles_minmax[1]-cycles_minmax[0]))  # , command=check_num_steps)
+        cycles_entry = Entry(f, textvariable=cycles)
+        cycles_label.grid(column=2, row=1)
+        cycles_entry.grid(column=2, row=2)
+        cycles_scale.grid(column=2, row=3)
+
+        src_voltage_label = Label(f, text='Source Voltage:')
+        src_voltage_scale = Scale(f, variable=source_voltage, orient="horizontal",
+                                  from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
+                                  tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_source_voltage)
+        src_voltage_entry = Entry(f, textvariable=source_voltage)
+        src_voltage_label.grid(column=1, row=1)
+        src_voltage_entry.grid(column=1, row=2)
+        src_voltage_scale.grid(column=1, row=3)
+
+        src_delay_label = Label(f, text='Source delay:')
+        src_delay_scale = Scale(f, variable=source_delay, orient="horizontal",
+                                from_=source_delay_minmax[0], to=source_delay_minmax[1], resolution=0.01, showvalue=0,
+                                tickinterval=(source_delay_minmax[1]-source_delay_minmax[0]))  # , command=check_source_delay)
+        src_delay_entry = Entry(f, textvariable=source_delay)
+        src_delay_label.grid(column=1, row=4)
+        src_delay_entry.grid(column=1, row=5)
+        src_delay_scale.grid(column=1, row=6)
+
+        current_compliance_label = Label(f, text='Current Compliance:')
+        current_compliance_scale = Scale(f, variable=current_compliance, orient="horizontal",
+                                         from_=current_minmax[0], to=current_minmax[1], resolution=0.00001, showvalue=0,
+                                         tickinterval=(current_minmax[1]-current_minmax[0]))  # , command=check_current)
+        current_compliance_entry = Entry(f, textvariable=current_compliance)
+        current_compliance_label.grid(column=3, row=1)
+        current_compliance_entry.grid(column=3, row=2)
+        current_compliance_scale.grid(column=3, row=3)
+
+    def device_select_frame_create(self, window, col, row):
         '''
         Create and populate device selector frame of GUI
 
         '''
         # Create frame
         f = ttk.Frame(window, padding=(12, 5, 12, 0))
-        f.grid(column=0, columnspan=2, row=4, rowspan=4, sticky=(N, W, E, S))
+        f.grid(column=col, columnspan=2, row=row,
+               rowspan=4, sticky=(N, W, E, S))
         f.configure(borderwidth=5, relief='raised')
 
         # Label the frame
@@ -523,8 +625,8 @@ class GUI():
             device_buttons[r][c].config(
                 text="1", bg="deep sky blue", activebackground="light sky blue")
 
-        for row in range(len(device_buttons)):
-            for col in range(len(device_buttons[row])):
+        for row in range(self._grid_size):
+            for col in range(self._grid_size):
                 device_buttons[row][col].config(
                     command=lambda row=row, col=col: change_device_grid_value(row, col))
 
@@ -646,71 +748,65 @@ class GUI():
             f, text="load preset", command=lambda: load_preset())
         load_preset_button.grid(column=9, row=5)
 
-    def gui_common_params(self):
+    def gui_main_window(self):
         '''
         Creates elements of the GUI for inputs common across all three testing functions
         '''
         # Define variables
-        device_x = self._gen_device_x
-        device_y = self._gen_device_y
-        device_coord_minmax = [0, 7]  # Could change in the future
-        chiplet_name = self._gen_chiplet_name
-        test_choice = self._gen_test_choice
-        button_text = StringVar(self._root)
+        # device_x = self._gen_device_x
+        # device_y = self._gen_device_y
+        # device_coord_minmax = [0, 7]  # Could change in the future
+        chiplet_name = self._chiplet_name
+        # test_choice = self._gen_test_choice
+        # button_text = StringVar(self._root)
 
-        def GetStartValues():
+        def get_start_values():
             try:  # Open JSON file if one exists, otherwise tell user no previous data available
                 with open('values.json', 'r') as openfile:
                     saved_vals = json.load(openfile)
 
                 # Take previous values from JSON file and give everything a starting value
-                device_x.set(saved_vals["gen_device_x"])
-                device_y.set(saved_vals["gen_device_y"])
+                # device_x.set(saved_vals["gen_device_x"])
+                # device_y.set(saved_vals["gen_device_y"])
                 chiplet_name.set(saved_vals["gen_chiplet_name"])
-                test_choice.set(saved_vals["gen_test_choice"])
+                # test_choice.set(saved_vals["gen_test_choice"])
             except:
-                print("Previous values not available, no JSON file found.")
+                print("Previous values not available.")
 
-        GetStartValues()
+        get_start_values()
 
-        '''
-        Functions to ensure no invalid data is sent from the GUI
-        an attempt at minimizing opportunities to fry our chiplets
-        '''
+        # def checkDeviceX(*args):
+        #     x = device_x.get()
+        #     if x > device_coord_minmax[1]:
+        #         device_x.set(device_coord_minmax[1])
+        #     elif x < device_coord_minmax[0]:
+        #         device_x.set(device_coord_minmax[0])
 
-        def checkDeviceX(*args):
-            x = device_x.get()
-            if x > device_coord_minmax[1]:
-                device_x.set(device_coord_minmax[1])
-            elif x < device_coord_minmax[0]:
-                device_x.set(device_coord_minmax[0])
+        # def checkDeviceY(*args):
+        #     y = device_y.get()
+        #     if y > device_coord_minmax[1]:
+        #         device_y.set(device_coord_minmax[1])
+        #     elif y < device_coord_minmax[0]:
+        #         device_y.set(device_coord_minmax[0])
 
-        def checkDeviceY(*args):
-            y = device_y.get()
-            if y > device_coord_minmax[1]:
-                device_y.set(device_coord_minmax[1])
-            elif y < device_coord_minmax[0]:
-                device_y.set(device_coord_minmax[0])
-
-        def checkChipletName(*args):
-            if re.search("[^a-zA-Z0-9s]", chiplet_name.get()):
-                messagebox.showwarning(
-                    "Warning!", "Chiplet name is invalid, please do not include any special characters")
+        # def checkChipletName(*args):
+        #     '''
+        #     Check to ensure str has no special characters
+        #     '''
+        #     if re.search("[^a-zA-Z0-9s]", chiplet_name.get()):
+        #         messagebox.showwarning(
+        #             "Warning!", "Chiplet name is invalid, please do not include any special characters")
 
         # call value check functions whenever a value in the GUI changes
-        device_x.trace_add('write', checkDeviceX)
-        device_y.trace_add('write', checkDeviceY)
-        chiplet_name.trace_add('write', checkChipletName)
+        # device_x.trace_add('write', checkDeviceX)
+        # device_y.trace_add('write', checkDeviceY)
+        # chiplet_name.trace_add('write', checkChipletName)
 
         # Universal parameters
-        chiplet_name_label = Label(self._root, text="Chiplet Name/Identifier:")
-        chiplet_name_entry = Entry(self._root, textvariable=chiplet_name)
 
-        device_xy_label = Label(self._root, text="X and Y device coords:")
-        device_x_entry = Entry(self._root, textvariable=device_x)
-        device_y_entry = Entry(self._root, textvariable=device_y)
-
-        test_lb = Listbox(self._root, selectmode="BROWSE")
+        # device_xy_label = Label(self._root, text="X and Y device coords:")
+        # device_x_entry = Entry(self._root, textvariable=device_x)
+        # device_y_entry = Entry(self._root, textvariable=device_y)
 
         def add_iv(*args):
             '''
@@ -721,7 +817,7 @@ class GUI():
             # Ensure window always shows up in the same space
             x = self._root.winfo_x()
             y = self._root.winfo_y()
-            window.geometry("600x400+%d+%d" % (x + 600, y + 400))
+            window.geometry("770x275+%d+%d" % (x + 50, y + 50))
 
             # Populate window with IVTest options
             self.iv_frame_create(window)
@@ -730,8 +826,8 @@ class GUI():
             self._root.wait_window(window)
             # Make new IVTest object
             iv = tests.IVTest(
-                grid=self._devices_grid.get(),
-                chiplet_name=self._gen_chiplet_name.get(),
+                grid=self._devices_grid,
+                chiplet_name=self._chiplet_name,
                 voltage_range=self._iv_range.get(),
                 mode=self._iv_mode.get(),
                 space=self._iv_space.get(),
@@ -750,20 +846,52 @@ class GUI():
         # def add_fp(*args):
         #     test_lb.insert(END, "Python")
         def add_et(*args):
+            '''
+
+            '''
+            # Create new window
+            window = Toplevel()
+            # Ensure window always shows up in the same space
+            x = self._root.winfo_x()
+            y = self._root.winfo_y()
+            window.geometry(f"770x275+{x+50}+{y+50}")
+
+            # Populate window with IVTest options
+            self.et_frame_create(window)
+
+            # Wait to do anything else until popup window is closed
+            self._root.wait_window(window)
+            # Make new EnduranceTest object
+            et = tests.EnduranceTest(
+                grid=self._devices_grid,
+                chiplet_name=self._chiplet_name,
+                source_voltage=self._et_source_voltage,
+                source_delay=self._et_source_delay,
+                current_compliance=self._et_current_compliance,
+                cycles=self._et_cycles,
+                set_voltage=self._et_set_voltage,
+                read_voltage=self._et_read_voltage,
+                reset_voltage=self._et_reset_voltage
+            )
 
             test_lb.insert(END, "Endurance Test")
-            self._tests_requested.append("Endurance Test")
+            self._tests_requested.append(et)
+
+        def add_set(*args):
+            '''
+            '''
+            test_lb.insert(END, "Set")
+            self._tests_requested.append("Set")
+
+        def add_reset(*args):
+            '''
+            '''
+            test_lb.insert(END, "Reset")
+            self._tests_requested.append("Reset")
 
         def clear_lb(*args):
             test_lb.delete(0, END)
             self._tests_requested = []
-
-        add_iv_button = Button(self._root, text="Add IV Test", command=add_iv)
-        # add_fp_button = Button(self._root, text="Add Forming Pulse", command=add_fp)
-        add_et_button = Button(
-            self._root, text="Add Endurance Test", command=add_et)
-        clear_lb_button = Button(
-            self._root, text="Clear Test Queue", command=clear_lb)
 
         # def select_test(*args):
         #     '''
@@ -781,29 +909,53 @@ class GUI():
         # # Run once to populate blank spaces if possible
         # select_test()
 
-        button = Button(self._root, textvariable=button_text,
-                        command=self.set_values)
+        # Chiplet name box
+        t = ttk.Frame(self._root, padding=(12, 5, 12, 0))
+        t.grid(column=4, columnspan=2, row=0, rowspan=4, sticky=(N, W, E, S))
+        t.configure(borderwidth=5, relief='raised')
+        chiplet_name_label = Label(t, text="Chiplet Name/Identifier:")
+        chiplet_name_entry = Entry(t, textvariable=chiplet_name)
+        chiplet_name_label.grid(column=0, row=0, pady=15)
+        chiplet_name_entry.grid(column=0, row=1, pady=15)
 
-        # Universal parameters
+        # Device grid box
+        self.device_select_frame_create(self._root, col=0, row=0)
 
-        test_lb.grid(column=7, columnspan=2, row=0, rowspan=3)
-        clear_lb_button.grid(column=7, columnspan=2, row=2, rowspan=1)
-        add_iv_button.grid(column=6, columnspan=1, row=0, rowspan=1)
-        # add_fp_button.grid(column=6, columnspan=1, row=2, rowspan=1)
-        add_et_button.grid(column=6, columnspan=1, row=4, rowspan=1)
+        # Test queue box
+        f = ttk.Frame(self._root, padding=(12, 5, 12, 0))
+        f.grid(column=2, columnspan=2, row=0, rowspan=4, sticky=(N, W, E, S))
+        f.configure(borderwidth=5, relief='raised')
+        test_lb = Listbox(f, selectmode="BROWSE")
+        test_lb_label = Label(f, text="Test Queue:")
+        add_set_button = Button(f, text="Set", command=add_set)
+        add_reset_button = Button(f, text="Reset", command=add_reset)
+        add_iv_button = Button(f, text="Add IV Test", command=add_iv)
+        add_et_button = Button(f, text="Add Endurance Test", command=add_et)
+        clear_lb_button = Button(f, text="Clear Test Queue", command=clear_lb)
 
-        chiplet_name_label.grid(column=7, row=4)
-        chiplet_name_entry.grid(column=8, row=4)
+        test_lb_label.grid(column=1, columnspan=2, row=0)
+        test_lb.grid(column=1, columnspan=2, row=1, rowspan=4)
+        clear_lb_button.grid(column=1, columnspan=2, row=5, rowspan=1)
+        add_iv_button.grid(column=0, columnspan=1, row=1, rowspan=1)
+        add_et_button.grid(column=0, columnspan=1, row=2, rowspan=1)
+        add_set_button.grid(column=0, columnspan=1, row=3, rowspan=1)
+        add_reset_button.grid(column=0, columnspan=1, row=4, rowspan=1)
 
-        device_xy_label.grid(column=6, row=5)
-        device_x_entry.grid(column=7, row=5)
-        device_y_entry.grid(column=8, row=5)
+        # Run button
+        button = Button(self._root, text="Run",
+                        command=self.set_values, width=25, height=3, background="red", activebackground="tomato")
+        button.grid(column=4, columnspan=2, row=4, rowspan=1, padx=0)
 
-        test_choice_1.grid(column=6, row=7)
+        # Progress bar
+        # TODO: Add progressbar
+
+        # device_xy_label.grid(column=6, row=5)
+        # device_x_entry.grid(column=7, row=5)
+        # device_y_entry.grid(column=8, row=5)
+
+        # test_choice_1.grid(column=6, row=7)
         # test_choice_2.grid(column=7, row=7)
-        test_choice_3.grid(column=8, row=7)
-
-        button.grid(column=6, columnspan=3, row=9)
+        # test_choice_3.grid(column=8, row=7)
 
     def set_values(self):
         '''
@@ -852,12 +1004,22 @@ class GUI():
 
         self._root.destroy()
 
-    def requested_tests(self):
+    def get_requested_tests(self):
         '''
         Returns a list of tests in order to be conducted
         '''
         return self._tests_requested
 
 
-gui = GUI()
-gui.gui_start()
+def check_special_chars(string):
+    '''
+    return:
+        1 if string contains special chars, 0 otherwise
+    '''
+    if re.search("[^a-zA-Z0-9s]", string):
+        return 1
+    return 0
+
+
+# gui = GUI()
+# gui.gui_start()
