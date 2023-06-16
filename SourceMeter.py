@@ -175,33 +175,13 @@ def save_to_excel(dataframe, name):
         workbook.save()
 
 
-def write_test_type(test):
-    '''
-    Returns:
-        a string describing conducted test to be used in making file name
-    '''
-    # Create test name for file naming
-    test_type = ""
-    if isinstance(test, tests.IVTest):
-        # Lin or log
-        if test.get_voltage_space == 'LIN':
-            test_type += "Linear_"
-        elif test.get_voltage_space == 'LOG':
-            test_type += "Logarithmic_"
-        # Show it was an IV
-        test_type += "IV"
-    elif isinstance(test, tests.IVTest):
-        test_type += "Endurance"
-    return test_type
-
-
 def create_test_folder(test):
     '''
     Creates folder for all device test files of a test
     return:
         folder path
     '''
-    test_type = write_test_type(test)
+    test_type = test.get_test_type()
     str_time = test.start_time.strftime("%m-%d-%Y_%H-%M-%S")
     # Get current directory
     home_dir = os.path.abspath(__file__)
@@ -249,15 +229,17 @@ def find_set_reset(dataframe):
     set_df = dataframe[dataframe['Voltage'] > 0]
     slopes = np.diff(set_df["Current"]) / np.diff(set_df["Voltage"])
 
-    slopes_max_index = slopes.idxmax()
+    slopes_df = pd.DataFrame(slopes)
+    slopes_max_index = slopes_df.idxmax()
 
     reset_df = dataframe[dataframe['Voltage'] < 0]
     slopes = np.diff(reset_df["Current"]) / np.diff(reset_df["Voltage"])
 
-    slopes_min_index = slopes.idxmin()
+    slopes_df = pd.DataFrame(slopes)
+    slopes_min_index = slopes_df.idxmin()
     return set_df.loc[slopes_max_index, "Voltage"], reset_df.loc[slopes_min_index, "Voltage"]
 
 
-sm = SourceMeter()
-sm.run_test()
-sm.create_excel_sheets()
+# sm = SourceMeter()
+# sm.run_test()
+# sm.create_excel_sheets()

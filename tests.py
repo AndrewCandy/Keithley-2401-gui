@@ -43,6 +43,12 @@ class Test(ABC):
             String of data from sourcemeter
         '''
 
+    @abstractmethod
+    def get_test_type(self):
+        '''
+        returns a string describing the type of test being run
+        '''
+
 
 class IVTest(Test):
     """
@@ -122,6 +128,19 @@ class IVTest(Test):
             )
         return measurements
 
+    def get_test_type(self):
+        '''
+        returns a string describing the type of test being run
+        '''
+        test_type = ""
+        if self._space == 'LIN':
+            test_type += "Linear_"
+        elif self._space == 'LOG':
+            test_type += "Logarithmic_"
+        # Show it was an IV
+        test_type += "IV"
+        return test_type
+
 
 class EnduranceTest(Test):
     """
@@ -173,6 +192,12 @@ class EnduranceTest(Test):
                 list_length=self._cycles*8
             )
         return measurements
+
+    def get_test_type(self):
+        '''
+        returns a string describing the type of test being run
+        '''
+        return "Endurance"
 
 # TODO: Add class for set and reset pulses
 
