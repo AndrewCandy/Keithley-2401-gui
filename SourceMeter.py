@@ -73,7 +73,7 @@ class SourceMeter():
             device_test_list = []
             for coords in test.selected_devices:
                 # Tell microcontroller what device we are targeting
-                microserial.message_micro(coords.x, coords.y)
+                #microserial.message_micro(coords.x, coords.y)
                 # Run the test
                 data = test.run_sourcemeter(self._instrument)
                 # Save the test data linked to the device coords
@@ -99,17 +99,52 @@ class SourceMeter():
                 row = device_test.y
                 data = device_test.data
                 dataframe = create_dataframe(data)
-                filename = f'{folder_path}\{test.chiplet_name}_Col{col}_Row{row}'
+                filename = f'{folder_path}\{test.get_chip_name()}_Col{col}_Row{row}.xlsx'
+                print('hi')
                 save_to_excel(dataframe, filename)
+                print('hey')
                 if isinstance(test, tests.IVTest):
                     set_voltage, reset_voltage = find_set_reset(dataframe)
-                    self.add_integer_to_excel(
+                    add_integer_to_excel(
                         filename, sheet_name, 'I11', 'Largest_Current_Diff_Set', set_voltage)
-                    self.add_integer_to_excel(
+                    add_integer_to_excel(
                         filename, sheet_name, 'J11', 'Largest_Current_Diff_Reset', reset_voltage)
                 elif isinstance(test, tests.EnduranceTest):
-                    HRS = find_HRS(dataframe)
+                    '''HRS = find_HRS(dataframe)
+                    add_list_to_excel(filename,sheet_name,'I11',HRS,'HRS')
                     LRS = find_LRS(dataframe)
+                    add_list_to_excel(filename,sheet_name,'K11',LRS,'LRS')'''
+                    print('hello')
+        #merge_excel_sheets(folder_path,test)
+    
+'''    
+def merge_excel_sheets(folder,test):
+
+    file_list = os.listdir(folder)
+    sheet_name = 'Sheet1'
+    complete_excel = os.path.join(folder, 'Complete_Excel.xlsx')
+    test_type = write_test_type(test)
+    create_blank_excel(complete_excel)
+    i=0
+    col = 1
+    row = 5
+    for file in file_list:
+        file_path = os.path.join(folder, file)
+        data = pd.read_excel(file_path)
+        HRS = data.iloc[11:, 8]
+        HRS = HRS.dropna().tolist()
+        print(HRS)
+        LRS = data.iloc[11:, 10]
+        LRS = LRS.dropna().tolist()
+        print(LRS)
+        insert_data(complete_excel,HRS,row, col)
+        col = col + 2  
+        insert_data(complete_excel,LRS,row, col)'''
+
+
+        
+
+
 
 
 def create_dataframe(data_string):
@@ -161,7 +196,7 @@ def save_to_excel(dataframe, name):
     '''
     dataframe.to_excel(name, index=False)
     sheet_name = "Sheet1"
-    df_mapping = {"A1": dataframe, "H1": dataframe.describe()}
+    '''df_mapping = {"A1": dataframe, "H1": dataframe.describe()}
     with xw.App(visible=False) as app:
         workbook = app.books.open(name)
         # Add sheet if it does not exist
@@ -173,7 +208,7 @@ def save_to_excel(dataframe, name):
             workbook.sheets(sheet_name).range(cell_target).options(
                 pd.DataFrame, index=True).value = dataframe
         workbook.save()
-
+'''
 
 def write_test_type(test):
     '''
@@ -190,7 +225,7 @@ def write_test_type(test):
             test_type += "Logarithmic_"
         # Show it was an IV
         test_type += "IV"
-    elif isinstance(test, tests.IVTest):
+    elif isinstance(test, tests.EnduranceTest):
         test_type += "Endurance"
     return test_type
 
@@ -215,21 +250,45 @@ def create_test_folder(test):
 
 def add_integer_to_excel(filename, sheet_name, cell_target, header, value):
     with xw.App(visible=False) as app:
-        wb = app.books.open(filename)
-        sheet = wb.sheets[sheet_name]
+        workbook = app.books.open(filename)
+        sheet = workbook.sheets[sheet_name]
         # Write the header
         sheet.range(cell_target).value = header
         # Write the value below the header
         sheet.range(cell_target).offset(row_offset=1).value = value
         # Save and close the workbook
-        wb.save()
+        workbook.save()
 
 
+def add_list_to_excel(filename, sheet_name, target, df, header_value):
+    df_mapping = {target: df}
+    with xw.App(visible=False) as app:
+        workbook = app.books.open(filename)
+        # Add sheet if it does not exist
+        current_sheets = [sheet.name for sheet in workbook.sheets]
+        if sheet_name not in current_sheets:
+            workbook.sheets.add(sheet_name)
+        # Write dataframe to cell range
+        for cell_target, dataframe in df_mapping.items():
+            sheet = workbook.sheets(sheet_name)
+            header_range = sheet.range(cell_target)
+            header_range.value = header_value
+            data_range = header_range.offset(row_offset=1)
+            data_range.options(index=False).value = dataframe
+        workbook.save()
+'''def insert_data(file,listdata,row, col):
+    wb = xlsxwriter.Workbook(file)
+    ws = wb.add_worksheet()
+    for item in listdata:
+        ws.write(row, col, item)
+        row += 1
+    wb.close()'''
 def find_HRS(dataframe):
     resistance = dataframe['Real Resistance']
     HRS = []
     for i in range(2, len(resistance), 8):
         HRS.append(resistance[i])
+    HRS = pd.DataFrame(HRS)    
     return HRS
 
 
@@ -238,6 +297,7 @@ def find_LRS(dataframe):
     LRS = []
     for i in range(6, len(resistance), 8):
         LRS.append(resistance[i])
+    LRS = pd.DataFrame(LRS)
     return LRS
 
 
@@ -247,16 +307,23 @@ def find_set_reset(dataframe):
         set, reset voltages
     '''
     set_df = dataframe[dataframe['Voltage'] > 0]
-    slopes = np.diff(set_df["Current"]) / np.diff(set_df["Voltage"])
-
-    slopes_max_index = slopes.idxmax()
+    slopes_set = np.diff(set_df["Current"]) #/ np.diff(set_df["Voltage"])
+    slopes_max_index = np.argmax(slopes_set)
 
     reset_df = dataframe[dataframe['Voltage'] < 0]
-    slopes = np.diff(reset_df["Current"]) / np.diff(reset_df["Voltage"])
+    slopes_reset = np.diff(reset_df["Current"]) #/ np.diff(reset_df["Voltage"])
+    slopes_min_index = np.argmax(slopes_reset)
+    print(slopes_max_index)
+    print(slopes_min_index)
+    set_volt = set_df.iloc[slopes_max_index, 0]
+    reset_volt = reset_df.iloc[slopes_min_index, 0]
+    print(set_volt, ' ', reset_volt)
+    return set_volt, reset_volt
 
-    slopes_min_index = slopes.idxmin()
-    return set_df.loc[slopes_max_index, "Voltage"], reset_df.loc[slopes_min_index, "Voltage"]
 
+def create_blank_excel(filename):    
+    dataframe = pd.DataFrame()
+    dataframe.to_excel(filename)
 
 sm = SourceMeter()
 sm.run_test()
