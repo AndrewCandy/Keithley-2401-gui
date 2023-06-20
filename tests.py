@@ -104,9 +104,8 @@ class IVTest(Test):
                 self._source_voltage_stop,
                 self._num_steps
             )
-            measurements += functions.Staircase_Lin(
+            measurements += functions.staircase_lin(
                 instrument=instrument,
-                is_up_down=self._is_up_down,
                 current_compliance=self._current_compliance,
                 source_voltage=self._source_voltage,
                 source_delay=self._source_delay,
@@ -116,7 +115,7 @@ class IVTest(Test):
                 trig_count=self._trigger_count
             )
         elif self._space == 'LOG':
-            measurements += functions.Staircase_Log(
+            measurements += functions.staircase_log(
                 instrument=instrument,
                 is_up_down=self._is_up_down,
                 current_compliance=self._current_compliance,
@@ -184,7 +183,7 @@ class EnduranceTest(Test):
             reset_voltage=self._reset_voltage
         )
         for _ in range(0, self._cycles, 5):
-            measurements += functions.endurance_Test(
+            measurements += functions.endurance_test(
                 instrument=instrument,
                 current_compliance=self._current_compliance,
                 source_voltage=self._source_voltage,

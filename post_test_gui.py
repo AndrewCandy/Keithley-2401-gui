@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter import ttk
-from tkinter import messagebox
+# from tkinter import messagebox
 import matplotlib.pyplot as plt
 import pandas as pd
 import functions
@@ -132,12 +132,15 @@ class ResultsGUI():
 
     def create_iv_graph(self):
         '''
-
+        Creates a new window containing an IV graph for the selected device
         '''
         # filename = self.get_filename()
         df = pd.read_excel("_Col5_Row3.xlsx")
 
         plt.plot(df["Voltage"], df["Current"])
+        plt.xlabel("Voltage")
+        plt.ylabel("Current")
+        plt.title(f"IV for device {self._selected_device_name.get()}")
         plt.show()
 
     def create_endurance_device_stats(self):
