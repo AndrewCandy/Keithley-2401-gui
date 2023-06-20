@@ -1,20 +1,20 @@
 import pyvisa
-import csv
 import matplotlib.pyplot as plt
 from collections import namedtuple
-import gui
-import microserial
-import functions
 import numpy as np
 import pandas as pd
 import xlwings as xw
-import tests
-import os
 from openpyxl import load_workbook
 from openpyxl import Workbook
 from openpyxl.cell import WriteOnlyCell
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils import FORMULAE
+
+import gui
+import microserial
+import functions
+import tests
+import post_test_gui
 # Test and features to add:
 # Forming Pulse, Endurance Test
 # Limits to each variable are as follows: When in Lin Voltage: 0-3.5V, Current:0-1A,
@@ -39,10 +39,10 @@ class SourceMeter():
 
         '''
         # Connect to source Meter
-        rm = pyvisa.ResourceManager()
+        # rm = pyvisa.ResourceManager()
         # print(rm.list_resources())
-        self._instrument = rm.open_resource(
-            'GPIB0::24::INSTR')  # Name of sourcemeter
+        # self._instrument = rm.open_resource(
+        #    'GPIB0::24::INSTR')  # Name of sourcemeter
 
         # Call GUI
         self._gui = gui.GUI()
@@ -93,7 +93,7 @@ class SourceMeter():
         for ran_test in self._ran_tests:
             test = ran_test.test
             device_test_list = ran_test.device_test_list
-            folder_path = create_test_folder(test)
+            folder_path = functions.create_test_folder(test)
             for device_test in device_test_list:
                 col = device_test.x
                 row = device_test.y
@@ -103,13 +103,21 @@ class SourceMeter():
                 save_to_excel(dataframe, filename)
                 if isinstance(test, tests.IVTest):
                     set_voltage, reset_voltage = find_set_reset(dataframe)
-                    self.add_integer_to_excel(
+                    add_integer_to_excel(
                         filename, sheet_name, 'I11', 'Largest_Current_Diff_Set', set_voltage)
-                    self.add_integer_to_excel(
+                    add_integer_to_excel(
                         filename, sheet_name, 'J11', 'Largest_Current_Diff_Reset', reset_voltage)
                 elif isinstance(test, tests.EnduranceTest):
                     HRS = find_HRS(dataframe)
                     LRS = find_LRS(dataframe)
+
+    def run_post_test_gui(self):
+        '''
+
+        '''
+        results_screen = post_test_gui.ResultsGUI(
+            self._gui.get_requested_tests())
+        results_screen.gui_start()
 
 
 def create_dataframe(data_string):
@@ -175,25 +183,9 @@ def save_to_excel(dataframe, name):
         workbook.save()
 
 
-def create_test_folder(test):
-    '''
-    Creates folder for all device test files of a test
-    return:
-        folder path
-    '''
-    test_type = test.get_test_type()
-    str_time = test.start_time.strftime("%m-%d-%Y_%H-%M-%S")
-    # Get current directory
-    home_dir = os.path.abspath(__file__)
-    current_directory = os.path.dirname(home_dir)
-    # Make new folder for test if doesn't exist
-    folder_path = os.path.join(
-        current_directory, f"SavedData\{test_type}_{str_time}")
-    os.makedirs(folder_path, exist_ok=True)
-    return folder_path
-
-
 def add_integer_to_excel(filename, sheet_name, cell_target, header, value):
+    '''
+    '''
     with xw.App(visible=False) as app:
         wb = app.books.open(filename)
         sheet = wb.sheets[sheet_name]
@@ -240,6 +232,7 @@ def find_set_reset(dataframe):
     return set_df.loc[slopes_max_index, "Voltage"], reset_df.loc[slopes_min_index, "Voltage"]
 
 
-# sm = SourceMeter()
+sm = SourceMeter()
 # sm.run_test()
 # sm.create_excel_sheets()
+sm.run_post_test_gui()

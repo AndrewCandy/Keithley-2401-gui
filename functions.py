@@ -1,4 +1,5 @@
 import itertools
+import os
 
 
 # Linear Staircase
@@ -298,19 +299,19 @@ def create_voltage_list(set_voltage, read_voltage, reset_voltage):
     return volt_string
 
 
-def create_data_stream(column, row):
+def create_test_folder(test):
     '''
-
+    Creates folder for all device test files of a test
+    return:
+        folder path
     '''
-    data_stream = [0]*21
-    for i in range(0, 21):
-        if (i == 0):
-            data_stream[i] = 0x80
-        if (i == 18):
-            data_stream[i] = column
-        elif (i == 19):
-            data_stream[i] = row
-        elif (i == 20):
-            data_stream[i] = 0x81
-
-    return data_stream
+    test_type = test.get_test_type()
+    str_time = test.start_time.strftime("%m-%d-%Y_%H-%M-%S")
+    # Get current directory
+    home_dir = os.path.abspath(__file__)
+    current_directory = os.path.dirname(home_dir)
+    # Make new folder for test if doesn't exist
+    folder_path = os.path.join(
+        current_directory, f"SavedData/{test_type}_{str_time}")
+    os.makedirs(folder_path, exist_ok=True)
+    return folder_path

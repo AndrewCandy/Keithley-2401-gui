@@ -19,13 +19,14 @@ class Test(ABC):
 
     """
 
-    def __init__(self, grid, chiplet_name):
+    def __init__(self, grid, test_num, chiplet_name):
         '''
         Initializes the Test class
         '''
         self.selected_devices = grid_to_list(grid)
         self.start_time = dt.now()
         self.chiplet_name = chiplet_name
+        self.test_num = test_num
 
     def set_start_time(self):
         '''
@@ -67,14 +68,14 @@ class IVTest(Test):
         _is_up_down:
     """
 
-    def __init__(self, grid, chiplet_name, voltage_range, mode, space,
+    def __init__(self, grid, test_num, chiplet_name, voltage_range, mode, space,
                  source_voltage, source_delay, source_voltage_start,
                  source_voltage_stop, num_steps, current_compliance, is_up_down
                  ):
         '''
         Initailizes the the IV_Test class and parent Test class
         '''
-        super().__init__(grid, chiplet_name)
+        super().__init__(grid, test_num, chiplet_name)
         self._range = voltage_range
         self._mode = mode
         self._space = space
@@ -138,7 +139,7 @@ class IVTest(Test):
         elif self._space == 'LOG':
             test_type += "Logarithmic_"
         # Show it was an IV
-        test_type += "IV"
+        test_type += f"IV_{self.test_num}"
         return test_type
 
 
@@ -156,14 +157,14 @@ class EnduranceTest(Test):
         _source_delay:
     """
 
-    def __init__(self, grid, chiplet_name, source_voltage, source_delay,
+    def __init__(self, grid, test_num, chiplet_name, source_voltage, source_delay,
                  current_compliance, cycles, set_voltage, read_voltage,
                  reset_voltage
                  ):
         '''
         Initailizes the the EnduranceTest class and parent Test class
         '''
-        super().__init__(grid, chiplet_name)
+        super().__init__(grid, test_num, chiplet_name)
         self._set_voltage = set_voltage
         self._read_voltage = read_voltage
         self._reset_voltage = reset_voltage
@@ -197,7 +198,7 @@ class EnduranceTest(Test):
         '''
         returns a string describing the type of test being run
         '''
-        return "Endurance"
+        return f"Endurance_{self.test_num}"
 
 # TODO: Add class for set and reset pulses
 

@@ -53,6 +53,12 @@ class GUI():
         # Variable to check if new tests were requested or if window was closed another way
         self._tests_requested = []
 
+        # count to label tests better
+        self._iv_test_num = 1
+        self._et_test_num = 1
+        self._set_num = 1
+        self._reset_num = 1
+
         self.gui_main_window()
 
     def gui_start(self):
@@ -705,7 +711,7 @@ class GUI():
         # Try to load most recent grid layout
         try:
             df = pd.read_csv(
-                f"device_grid_last_vals.csv", header=None, index_col=None)
+                "device_grid_last_vals.csv", header=None, index_col=None)
             for c in range(self._grid_size):
                 for r in range(self._grid_size):
                     if df[r][c] == 1:
@@ -756,6 +762,7 @@ class GUI():
             # Make new IVTest object
             iv = tests.IVTest(
                 grid=self._devices_grid,
+                test_num=self._iv_test_num,
                 chiplet_name=self._chiplet_name.get(),
                 voltage_range=self._iv_range.get(),
                 mode=self._iv_mode.get(),
@@ -769,7 +776,8 @@ class GUI():
                 is_up_down=self._iv_is_up_down.get()
             )
 
-            test_lb.insert(END, "IV Test")
+            test_lb.insert(END, f"IV Test {self._iv_test_num}")
+            self._iv_test_num += 1
             self._tests_requested.append(iv)
 
         def add_et(*args):
@@ -791,6 +799,7 @@ class GUI():
             # Make new EnduranceTest object
             et = tests.EnduranceTest(
                 grid=self._devices_grid,
+                test_num=self._et_test_num,
                 chiplet_name=self._chiplet_name.get(),
                 source_voltage=self._et_source_voltage.get(),
                 source_delay=self._et_source_delay.get(),
@@ -801,23 +810,27 @@ class GUI():
                 reset_voltage=self._et_reset_voltage.get()
             )
 
-            test_lb.insert(END, "Endurance Test")
+            test_lb.insert(END, f"Endurance Test {self._et_test_num}")
+            self._et_test_num += 1
             self._tests_requested.append(et)
 
         def add_set(*args):
             '''
             '''
-            test_lb.insert(END, "Set")
+            test_lb.insert(END, f"Set {self._set_num}")
+            self._set_num += 1
             self._tests_requested.append("Set")
 
         def add_reset(*args):
             '''
             '''
-            test_lb.insert(END, "Reset")
+            test_lb.insert(END, f"Reset {self._reset_num}")
+            self._reset_num += 1
             self._tests_requested.append("Reset")
 
         def clear_lb(*args):
             test_lb.delete(0, END)
+            self._iv_test_num, self._et_test_num, self._set_num, self._reset_num = 0, 0, 0, 0
             self._tests_requested = []
 
         # Chip name box
@@ -923,5 +936,5 @@ def check_special_chars(string):
     return 0
 
 
-gui = GUI()
-gui.gui_start()
+# gui = GUI()
+# gui.gui_start()
