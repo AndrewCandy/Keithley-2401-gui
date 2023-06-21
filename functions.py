@@ -207,3 +207,27 @@ def calc_trig_count(source_voltage_stop, source_voltage_start,
     elif iv_space == 'LOG':
         trig_count = log_num_steps
     return trig_count
+
+
+def find_hrs(dataframe):
+    '''
+    Input dataframe must be data from endurance test
+    returns list of HRS readings from endurance test
+    '''
+    resistance = dataframe['Real Resistance']
+    hrs = []
+    for i in range(2, len(resistance), 8):
+        hrs.append(resistance[i])
+    return hrs
+
+
+def find_lrs(dataframe):
+    '''
+    Input dataframe must be data from endurance test
+    returns list of LRS readings from endurance test
+    '''
+    resistance = dataframe['Real Resistance']
+    lrs = []
+    for i in range(6, len(resistance), 8):
+        lrs.append(resistance[i])
+    return lrs

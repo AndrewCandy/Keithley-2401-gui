@@ -64,6 +64,12 @@ class ResultsGUI():
             self._selected_device_name.set(list(self._device_dict.keys())[0])
             devices["values"] = list(self._device_dict.keys())
 
+            # Change graph button command for endurance/iv tests
+            if self._selected_test_name.get()[0] == "E":
+                graph_button["command"] = self.create_endurance_graph
+            else:
+                graph_button["command"] = self.create_iv_graph
+
         devices = ttk.Combobox(self._root, width=27, values=list(self._device_dict.keys()),
                                textvariable=self._selected_device_name)
         devices.grid(column=1, row=1)
@@ -75,7 +81,10 @@ class ResultsGUI():
             "write", callback=create_devices_list)
 
         def device_name_call(*args):
-            self.create_iv_device_stats(self._root, col=2, row=1)
+            if self._selected_test_name.get()[0] == "E":
+                self.create_endurance_device_stats(self._root, col=2, row=1)
+            else:
+                self.create_iv_device_stats(self._root, col=2, row=1)
 
         self._selected_device_name.trace_add(
             "write", callback=device_name_call)
@@ -109,7 +118,7 @@ class ResultsGUI():
 
     def create_iv_device_stats(self, window, col, row):
         '''
-        Create a fram containing statistical data about the selected test
+        Create a frame containing statistical data about the selected test
         '''
         # Create frame
         frame = ttk.Frame(window, padding=(12, 5, 12, 0))
@@ -143,18 +152,51 @@ class ResultsGUI():
         plt.title(f"IV for device {self._selected_device_name.get()}")
         plt.show()
 
-    def create_endurance_device_stats(self):
+    def create_endurance_device_stats(self, window, col, row):
         '''
+        Create a frame containing statistical data about the selected test
         '''
+        # Create frame
+        frame = ttk.Frame(window, padding=(12, 5, 12, 0))
+        frame.grid(column=col, columnspan=2, row=row,
+                   rowspan=4, sticky=(N, W, E, S))
+        frame.configure(borderwidth=5, relief='raised')
 
-    def create_iv_cumulative_stats(self):
-        '''
-        '''
+        # Label the frame
+        ds_label = Label(frame, text=f"{self._selected_test_name.get()}")
+        ds_label.configure(font=("Arial", 28))
+        ds_label.grid(column=0, columnspan=8, row=0)
 
-    def create_endurance_cumulative_stats(self):
+        # filename = self.get_filename()
+        df = pd.read_excel("_Col5_Row3.xlsx")  # filename) #changed for testing
+
+    def create_endurance_graph(self):
         '''
+        Creates a new window containing a scatter of hrs and lrs resistances for the selected device
         '''
+        # filename = self.get_filename()
+        df = pd.read_excel("_Col3_Row5.xlsx")
+
+        hrs = functions.find_hrs(df)
+        lrs = functions.find_lrs(df)
+
+        plt.scatter(range(len(hrs)), hrs)
+        plt.scatter(range(len(lrs)), lrs)
+        plt.xlabel("Cycle #")
+        plt.ylabel("Resistance")
+        plt.title(f"HRS vs LRS for device {self._selected_device_name.get()}")
+        plt.legend(["HRS", "LRS"])
+        plt.show()
+
+    # def create_iv_cumulative_stats(self):
+    #     '''
+    #     '''
+
+    # def create_endurance_cumulative_stats(self):
+    #     '''
+    #     '''
 
 
-# gui = ResultsGUI()
+gui = ResultsGUI([])
+gui.create_endurance_graph()
 # gui.gui_start()

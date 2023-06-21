@@ -37,11 +37,11 @@ class SourceMeter():
         '''
 
         '''
-        # Connect to source Meter
-        rm = pyvisa.ResourceManager()
-        # print(rm.list_resources())
-        self._instrument = rm.open_resource(
-            'GPIB0::24::INSTR')  # Name of sourcemeter
+        # # Connect to source Meter
+        # rm = pyvisa.ResourceManager()
+        # # print(rm.list_resources())
+        # self._instrument = rm.open_resource(
+        #     'GPIB0::24::INSTR')  # Name of sourcemeter
 
         # Call GUI
         self._gui = gui.GUI()
@@ -109,8 +109,9 @@ class SourceMeter():
                     add_integer_to_excel(
                         filename, sheet_name, 'J11', 'Largest_Current_Diff_Reset', reset_voltage)
                 elif isinstance(test, tests.EnduranceTest):
-                    HRS = find_HRS(dataframe)
-                    LRS = find_LRS(dataframe)
+                    # These functions now return a list not a 1 column dataframe
+                    hrs = functions.find_hrs(dataframe)
+                    lrs = functions.find_lrs(dataframe)
 
     def run_post_test_gui(self):
         '''
@@ -223,24 +224,6 @@ def add_list_to_excel(filename, sheet_name, target, df, header_value):
         ws.write(row, col, item)
         row += 1
     wb.close()'''
-
-
-def find_HRS(dataframe):
-    resistance = dataframe['Real Resistance']
-    HRS = []
-    for i in range(2, len(resistance), 8):
-        HRS.append(resistance[i])
-    HRS = pd.DataFrame(HRS)
-    return HRS
-
-
-def find_LRS(dataframe):
-    resistance = dataframe['Real Resistance']
-    LRS = []
-    for i in range(6, len(resistance), 8):
-        LRS.append(resistance[i])
-    LRS = pd.DataFrame(LRS)
-    return LRS
 
 
 def find_set_reset(dataframe):

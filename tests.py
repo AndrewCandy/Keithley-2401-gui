@@ -189,7 +189,7 @@ class EnduranceTest(Test):
                 source_voltage=self._source_voltage,
                 source_delay=self._source_delay,
                 voltage_list=voltage_list,
-                list_length=self._cycles*8
+                list_length=40
             )
         return measurements
 
