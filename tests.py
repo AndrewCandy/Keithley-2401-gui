@@ -89,6 +89,9 @@ class IVTest(Test):
         self._is_up_down = is_up_down
 
     def get_voltage_space(self):
+        '''
+        returns LIN or LOG based on what type of test is selected
+        '''
         return self._space
 
     def run_sourcemeter(self, instrument):
@@ -220,9 +223,9 @@ def grid_to_list(grid):
     '''
     Point = namedtuple("Point", "x y")
     tuple_list = []
-    for col in range(len(grid)):
-        for row in range(len(grid[col])):
-            if grid[col][row] == 1:
+    for col, column in enumerate(grid):
+        for row, cell in enumerate(column):
+            if cell == 1:
                 point = Point(col, row)
                 tuple_list.append(point)
     return tuple_list

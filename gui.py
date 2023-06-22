@@ -1,3 +1,6 @@
+"""
+Module to run the pre test gui where tests are selected and queued
+"""
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
@@ -46,7 +49,7 @@ class GUI():
         # create a grid for storing the positions of selected devices
         self._grid_size = 8
         self._devices_grid = []
-        for i in range(self._grid_size):
+        for _ in range(self._grid_size):
             row = [0] * self._grid_size
             self._devices_grid.append(row)
 
@@ -89,21 +92,21 @@ class GUI():
         num_steps_minmax = [1, 100]
 
         # Create frame structure to place widgets in for IV Test
-        c = ttk.Frame(window, padding=(12, 5, 12, 0))
-        c.grid(column=0, row=0, sticky=(N, W, E, S))
-        c.configure(borderwidth=5, relief='raised')
+        frame = ttk.Frame(window, padding=(12, 5, 12, 0))
+        frame.grid(column=0, row=0, sticky=(N, W, E, S))
+        frame.configure(borderwidth=5, relief='raised')
 
         # Create option lists for non-numeric inputs
-        sweep_range_label = Label(c, text='Sweep Range:')
-        sr_choice_1 = Radiobutton(c, text="BEST", variable=rangename,
+        sweep_range_label = Label(frame, text='Sweep Range:')
+        sr_choice_1 = Radiobutton(frame, text="BEST", variable=rangename,
                                   value="BEST")
-        voltage_mode_label = Label(c, text='Voltage Mode:')
-        vm_choice_1 = Radiobutton(c, text="SWE", variable=modename,
+        voltage_mode_label = Label(frame, text='Voltage Mode:')
+        vm_choice_1 = Radiobutton(frame, text="SWE", variable=modename,
                                   value="SWE")
-        sweep_space_label = Label(c, text='Sweep Space:')
-        ss_choice_1 = Radiobutton(c, text="Linear", variable=spacename,
+        sweep_space_label = Label(frame, text='Sweep Space:')
+        ss_choice_1 = Radiobutton(frame, text="Linear", variable=spacename,
                                   value="LIN")
-        ss_choice_2 = Radiobutton(c, text="Logarithmic", variable=spacename,
+        ss_choice_2 = Radiobutton(frame, text="Logarithmic", variable=spacename,
                                   value="LOG")
 
         # Set starting values based on previous set values
@@ -130,53 +133,76 @@ class GUI():
         get_start_values()
 
         # Label the frame
-        iv_test_label = Label(c, text="IV Test Parameters")
+        iv_test_label = Label(frame, text="IV Test Parameters")
         iv_test_label.configure(font=("Arial", 28))
 
         # Create sliders and text entry points for numeric inputs
-        src_voltage_label = Label(c, text='Source Voltage:')
-        src_voltage_scale = Scale(c, variable=source_voltage, orient="horizontal",
-                                  from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
-                                  tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_source_voltage)
-        src_voltage_entry = Entry(c, textvariable=source_voltage)
+        src_voltage_label = Label(frame, text='Source Voltage:')
+        src_voltage_scale = Scale(
+            frame, variable=source_voltage, orient="horizontal",
+            from_=source_voltage_minmax[0], to=source_voltage_minmax[1],
+            resolution=0.1, showvalue=0,
+            tickinterval=source_voltage_minmax[1]-source_voltage_minmax[0]
+        )
+        src_voltage_entry = Entry(frame, textvariable=source_voltage)
 
-        src_delay_label = Label(c, text='Source delay:')
-        src_delay_scale = Scale(c, variable=source_delay, orient="horizontal",
-                                from_=source_delay_minmax[0], to=source_delay_minmax[1], resolution=0.01, showvalue=0,
-                                tickinterval=(source_delay_minmax[1]-source_delay_minmax[0]))  # , command=check_source_delay)
-        src_delay_entry = Entry(c, textvariable=source_delay)
+        src_delay_label = Label(frame, text='Source delay:')
+        src_delay_scale = Scale(
+            frame, variable=source_delay, orient="horizontal",
+            from_=source_delay_minmax[0], to=source_delay_minmax[1],
+            resolution=0.01, showvalue=0,
+            tickinterval=source_delay_minmax[1]-source_delay_minmax[0]
+        )
+        src_delay_entry = Entry(frame, textvariable=source_delay)
 
-        src_voltage_start_label = Label(c, text='Source Voltage Start:')
-        src_voltage_start_scale = Scale(c, variable=source_voltage_start, orient="horizontal",
-                                        from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
-                                        tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_voltage_start)
-        src_voltage_start_entry = Entry(c, textvariable=source_voltage_start)
+        src_voltage_start_label = Label(frame, text='Source Voltage Start:')
+        src_voltage_start_scale = Scale(
+            frame, variable=source_voltage_start, orient="horizontal",
+            from_=source_voltage_minmax[0], to=source_voltage_minmax[1],
+            resolution=0.1, showvalue=0,
+            tickinterval=source_voltage_minmax[1]-source_voltage_minmax[0]
+        )
+        src_voltage_start_entry = Entry(
+            frame, textvariable=source_voltage_start)
 
-        src_voltage_stop_label = Label(c, text='Source Voltage Stop:')
-        src_voltage_stop_scale = Scale(c, variable=source_voltage_stop, orient="horizontal",
-                                       from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
-                                       tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_voltage_stop)
-        src_voltage_stop_entry = Entry(c, textvariable=source_voltage_stop)
+        src_voltage_stop_label = Label(frame, text='Source Voltage Stop:')
+        src_voltage_stop_scale = Scale(
+            frame, variable=source_voltage_stop, orient="horizontal",
+            from_=source_voltage_minmax[0], to=source_voltage_minmax[1],
+            resolution=0.1, showvalue=0,
+            tickinterval=source_voltage_minmax[1]-source_voltage_minmax[0]
+        )
+        src_voltage_stop_entry = Entry(frame, textvariable=source_voltage_stop)
 
-        num_steps_label = Label(c, text='Number of Steps:')
-        num_steps_scale = Scale(c, variable=num_steps, orient="horizontal",
-                                from_=num_steps_minmax[0], to=num_steps_minmax[1], resolution=1, showvalue=0,
-                                tickinterval=(num_steps_minmax[1]-num_steps_minmax[0]))  # , command=check_num_steps)
-        num_steps_entry = Entry(c, textvariable=num_steps)
+        num_steps_label = Label(frame, text='Number of Steps:')
+        num_steps_scale = Scale(
+            frame, variable=num_steps, orient="horizontal",
+            from_=num_steps_minmax[0], to=num_steps_minmax[1],
+            resolution=1, showvalue=0,
+            tickinterval=num_steps_minmax[1]-num_steps_minmax[0]
+        )
+        num_steps_entry = Entry(frame, textvariable=num_steps)
 
-        accuracy_label = Label(c, text='Accuracy:')
-        accuracy_scale = Scale(c, variable=accuracy, orient="horizontal",
-                               from_=0.01, to=10, resolution=.01, showvalue=0, tickinterval=(10-0.01))
-        accuracy_entry = Entry(c, textvariable=accuracy)
+        accuracy_label = Label(frame, text='Accuracy:')
+        accuracy_scale = Scale(
+            frame, variable=accuracy, orient="horizontal",
+            from_=0.01, to=10, resolution=.01, showvalue=0,
+            tickinterval=10-0.01
+        )
+        accuracy_entry = Entry(frame, textvariable=accuracy)
 
-        current_compliance_label = Label(c, text='Current Compliance:')
-        current_compliance_scale = Scale(c, variable=current_compliance, orient="horizontal",
-                                         from_=current_minmax[0], to=current_minmax[1], resolution=0.00001, showvalue=0,
-                                         tickinterval=(current_minmax[1]-current_minmax[0]))  # , command=check_current)
-        current_compliance_entry = Entry(c, textvariable=current_compliance)
+        current_compliance_label = Label(frame, text='Current Compliance:')
+        current_compliance_scale = Scale(
+            frame, variable=current_compliance, orient="horizontal",
+            from_=current_minmax[0], to=current_minmax[1],
+            resolution=0.00001, showvalue=0,
+            tickinterval=current_minmax[1]-current_minmax[0]
+        )
+        current_compliance_entry = Entry(
+            frame, textvariable=current_compliance)
 
-        stairs_button_label = Label(c, text="Stairs up and down?")
-        stairs_button = Checkbutton(c, variable=is_up_down, width=20)
+        stairs_button_label = Label(frame, text="Stairs up and down?")
+        stairs_button = Checkbutton(frame, variable=is_up_down, width=20)
 
         # Place items in frame
         def grid_assign():
@@ -247,9 +273,9 @@ class GUI():
                 # Create new window
                 window = Toplevel()
                 # Ensure window always shows up in the same space
-                x = self._root.winfo_x()
-                y = self._root.winfo_y()
-                window.geometry("+%d+%d" % (x + 600, y + 400))
+                pos_x = self._root.winfo_x()
+                pos_y = self._root.winfo_y()
+                window.geometry(f"+{pos_x+600}+{pos_y+400}")
                 # Populate window
                 label1 = Label(window, text="Enter preset name:")
                 label1.grid(column=0, row=0)
@@ -258,7 +284,8 @@ class GUI():
                 label2 = Label(window, text="When finished, exit the window.")
                 label2.grid(column=0, row=2)
                 label3 = Label(
-                    window, text="Note: You can rewrite an old preset by\nassigning a new preset the same name")
+                    window, text="Note: You can rewrite an old preset by\n \
+                                  assigning a new preset the same name")
                 label3.grid(column=0, row=4, pady=15)
 
             preset_window()
@@ -296,26 +323,26 @@ class GUI():
             get_start_values(f"IVTestPresets/{preset_name}.json")
 
         save_preset_button = Button(
-            c, text="save preset", command=store_preset)
+            frame, text="save preset", command=store_preset)
         save_preset_button.grid(column=9, row=3)
 
         selected_preset = StringVar()
-        presets = ttk.Combobox(c, width=27, textvariable=selected_preset)
+        presets = ttk.Combobox(frame, width=27, textvariable=selected_preset)
         presets.grid(column=9, row=1)
 
         # Create a list of files in DevicePresets folder
 
         def update_preset_list():
             preset_list = os.listdir("IVTestPresets/")
-            for i in range(len(preset_list)):
-                preset_list[i] = preset_list[i][0:-5]
+            for _, preset_name in enumerate(preset_list):
+                preset_name = preset_name[0:-5]
             return preset_list
 
         # Adding list to presets combobox
         presets['values'] = update_preset_list()
 
         load_preset_button = Button(
-            c, text="load preset", command=load_preset)
+            frame, text="load preset", command=load_preset)
         load_preset_button.grid(column=9, row=5)
 
     def et_frame_create(self, window):
@@ -358,75 +385,83 @@ class GUI():
         get_start_values()
 
         # Created frame for Endurance Test
-        f = ttk.Frame(window, padding=(12, 5, 12, 0))
-        f.grid(column=0, row=0, sticky=(N, W, E, S))
-        f.configure(borderwidth=5, relief='raised')
+        frame = ttk.Frame(window, padding=(12, 5, 12, 0))
+        frame.grid(column=0, row=0, sticky=(N, W, E, S))
+        frame.configure(borderwidth=5, relief='raised')
 
         # Label the frame
-        et_test_label = Label(f, text="Endurance Test Parameters")
+        et_test_label = Label(frame, text="Endurance Test Parameters")
         et_test_label.configure(font=("Arial", 28))
         et_test_label.grid(column=0, columnspan=5, row=0)
 
         # Create Widgets for inputs
-        set_voltage_label = Label(f, text='Set Voltage:')
-        set_voltage_scale = Scale(f, variable=set_voltage, orient="horizontal",
-                                  from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=1, showvalue=0,
-                                  tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_num_steps)
-        set_voltage_entry = Entry(f, textvariable=set_voltage)
+        set_voltage_label = Label(frame, text='Set Voltage:')
+        set_voltage_scale = Scale(frame, variable=set_voltage, orient="horizontal",
+                                  from_=source_voltage_minmax[0], to=source_voltage_minmax[1],
+                                  resolution=1, showvalue=0,
+                                  tickinterval=source_voltage_minmax[1]-source_voltage_minmax[0])
+        set_voltage_entry = Entry(frame, textvariable=set_voltage)
         set_voltage_label.grid(column=0, row=1)
         set_voltage_entry.grid(column=0, row=2)
         set_voltage_scale.grid(column=0, row=3)
 
-        reset_voltage_label = Label(f, text='Reset Voltage:')
-        reset_voltage_scale = Scale(f, variable=reset_voltage, orient="horizontal",
-                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=1, showvalue=0,
-                                    tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_num_steps)
-        reset_voltage_entry = Entry(f, textvariable=reset_voltage)
+        reset_voltage_label = Label(frame, text='Reset Voltage:')
+        reset_voltage_scale = Scale(frame, variable=reset_voltage, orient="horizontal",
+                                    from_=source_voltage_minmax[0], to=source_voltage_minmax[1],
+                                    resolution=1, showvalue=0,
+                                    tickinterval=source_voltage_minmax[1]-source_voltage_minmax[0])
+        reset_voltage_entry = Entry(frame, textvariable=reset_voltage)
         reset_voltage_label.grid(column=0, row=4)
         reset_voltage_entry.grid(column=0, row=5)
         reset_voltage_scale.grid(column=0, row=6)
 
-        read_voltage_label = Label(f, text='Read Voltage:')
-        read_voltage_scale = Scale(f, variable=read_voltage, orient="horizontal",
-                                   from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
-                                   tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_num_steps)
-        read_voltage_entry = Entry(f, textvariable=read_voltage)
+        read_voltage_label = Label(frame, text='Read Voltage:')
+        read_voltage_scale = Scale(frame, variable=read_voltage, orient="horizontal",
+                                   from_=source_voltage_minmax[0], to=source_voltage_minmax[1],
+                                   resolution=0.1, showvalue=0,
+                                   tickinterval=source_voltage_minmax[1]-source_voltage_minmax[0])
+        read_voltage_entry = Entry(frame, textvariable=read_voltage)
         read_voltage_label.grid(column=0, row=7)
         read_voltage_entry.grid(column=0, row=8)
         read_voltage_scale.grid(column=0, row=9)
 
-        cycles_label = Label(f, text='Number of Cycles:')
-        cycles_scale = Scale(f, variable=cycles, orient="horizontal",
-                             from_=cycles_minmax[0], to=cycles_minmax[1], resolution=5, showvalue=0,
-                             tickinterval=(cycles_minmax[1]-cycles_minmax[0]))  # , command=check_num_steps)
-        cycles_entry = Entry(f, textvariable=cycles)
+        cycles_label = Label(frame, text='Number of Cycles:')
+        cycles_scale = Scale(frame, variable=cycles, orient="horizontal",
+                             from_=cycles_minmax[0], to=cycles_minmax[1],
+                             resolution=5, showvalue=0,
+                             tickinterval=cycles_minmax[1]-cycles_minmax[0])
+        cycles_entry = Entry(frame, textvariable=cycles)
         cycles_label.grid(column=2, row=1)
         cycles_entry.grid(column=2, row=2)
         cycles_scale.grid(column=2, row=3)
 
-        src_voltage_label = Label(f, text='Source Voltage:')
-        src_voltage_scale = Scale(f, variable=source_voltage, orient="horizontal",
-                                  from_=source_voltage_minmax[0], to=source_voltage_minmax[1], resolution=0.1, showvalue=0,
-                                  tickinterval=(source_voltage_minmax[1]-source_voltage_minmax[0]))  # , command=check_source_voltage)
-        src_voltage_entry = Entry(f, textvariable=source_voltage)
+        src_voltage_label = Label(frame, text='Source Voltage:')
+        src_voltage_scale = Scale(frame, variable=source_voltage, orient="horizontal",
+                                  from_=source_voltage_minmax[0], to=source_voltage_minmax[1],
+                                  resolution=0.1, showvalue=0,
+                                  tickinterval=source_voltage_minmax[1]-source_voltage_minmax[0])
+        src_voltage_entry = Entry(frame, textvariable=source_voltage)
         src_voltage_label.grid(column=1, row=1)
         src_voltage_entry.grid(column=1, row=2)
         src_voltage_scale.grid(column=1, row=3)
 
-        src_delay_label = Label(f, text='Source delay:')
-        src_delay_scale = Scale(f, variable=source_delay, orient="horizontal",
-                                from_=source_delay_minmax[0], to=source_delay_minmax[1], resolution=0.01, showvalue=0,
-                                tickinterval=(source_delay_minmax[1]-source_delay_minmax[0]))  # , command=check_source_delay)
-        src_delay_entry = Entry(f, textvariable=source_delay)
+        src_delay_label = Label(frame, text='Source delay:')
+        src_delay_scale = Scale(frame, variable=source_delay, orient="horizontal",
+                                from_=source_delay_minmax[0], to=source_delay_minmax[1],
+                                resolution=0.01, showvalue=0,
+                                tickinterval=source_delay_minmax[1]-source_delay_minmax[0])
+        src_delay_entry = Entry(frame, textvariable=source_delay)
         src_delay_label.grid(column=1, row=4)
         src_delay_entry.grid(column=1, row=5)
         src_delay_scale.grid(column=1, row=6)
 
-        current_compliance_label = Label(f, text='Current Compliance:')
-        current_compliance_scale = Scale(f, variable=current_compliance, orient="horizontal",
-                                         from_=current_minmax[0], to=current_minmax[1], resolution=0.00001, showvalue=0,
-                                         tickinterval=(current_minmax[1]-current_minmax[0]))  # , command=check_current)
-        current_compliance_entry = Entry(f, textvariable=current_compliance)
+        current_compliance_label = Label(frame, text='Current Compliance:')
+        current_compliance_scale = Scale(frame, variable=current_compliance, orient="horizontal",
+                                         from_=current_minmax[0], to=current_minmax[1],
+                                         resolution=0.00001, showvalue=0,
+                                         tickinterval=current_minmax[1]-current_minmax[0])
+        current_compliance_entry = Entry(
+            frame, textvariable=current_compliance)
         current_compliance_label.grid(column=3, row=1)
         current_compliance_entry.grid(column=3, row=2)
         current_compliance_scale.grid(column=3, row=3)
@@ -445,9 +480,9 @@ class GUI():
                 # Create new window
                 window = Toplevel()
                 # Ensure window always shows up in the same space
-                x = self._root.winfo_x()
-                y = self._root.winfo_y()
-                window.geometry("+%d+%d" % (x + 600, y + 400))
+                pos_x = self._root.winfo_x()
+                pos_y = self._root.winfo_y()
+                window.geometry(f"+{pos_x+600}+{pos_y+400}")
                 # Populate window
                 label1 = Label(window, text="Enter preset name:")
                 label1.grid(column=0, row=0)
@@ -456,7 +491,8 @@ class GUI():
                 label2 = Label(window, text="When finished, exit the window.")
                 label2.grid(column=0, row=2)
                 label3 = Label(
-                    window, text="Note: You can rewrite an old preset by\nassigning a new preset the same name")
+                    window, text="Note: You can rewrite an old preset by\n \
+                                  assigning a new preset the same name")
                 label3.grid(column=0, row=4, pady=15)
 
             preset_window()
@@ -490,26 +526,26 @@ class GUI():
             get_start_values(f"EnduranceTestPresets/{preset_name}.json")
 
         save_preset_button = Button(
-            f, text="save preset", command=store_preset)
+            frame, text="save preset", command=store_preset)
         save_preset_button.grid(column=9, row=3)
 
         selected_preset = StringVar()
-        presets = ttk.Combobox(f, width=27, textvariable=selected_preset)
+        presets = ttk.Combobox(frame, width=27, textvariable=selected_preset)
         presets.grid(column=9, row=1)
 
         # Create a list of files in DevicePresets folder
 
         def update_preset_list():
             preset_list = os.listdir("EnduranceTestPresets/")
-            for i in range(len(preset_list)):
-                preset_list[i] = preset_list[i][0:-5]
+            for _, preset_name in enumerate(preset_list):
+                preset_name = preset_name[0:-5]
             return preset_list
 
         # Adding list to presets combobox
         presets['values'] = update_preset_list()
 
         load_preset_button = Button(
-            f, text="load preset", command=load_preset)
+            frame, text="load preset", command=load_preset)
         load_preset_button.grid(column=9, row=5)
 
     def device_select_frame_create(self, window, col, row):
@@ -518,35 +554,35 @@ class GUI():
 
         '''
         # Create frame
-        f = ttk.Frame(window, padding=(12, 5, 12, 0))
-        f.grid(column=col, columnspan=2, row=row,
-               rowspan=4, sticky=(N, W, E, S))
-        f.configure(borderwidth=5, relief='raised')
+        frame = ttk.Frame(window, padding=(12, 5, 12, 0))
+        frame.grid(column=col, columnspan=2, row=row,
+                   rowspan=4, sticky=(N, W, E, S))
+        frame.configure(borderwidth=5, relief='raised')
 
         # Label the frame
-        ds_label = Label(f, text="Endurance Test Parameters")
+        ds_label = Label(frame, text="Endurance Test Parameters")
         ds_label.configure(font=("Arial", 28))
         ds_label.grid(column=0, columnspan=8, row=0)
 
         # Create and place widgets for device selection
         device_buttons = []
-        for c in range(self._grid_size):
+        for col in range(self._grid_size):
             row = []
-            for r in range(self._grid_size):
-                button = Button(f, text=0, bg="light gray",
+            for row in range(self._grid_size):
+                button = Button(frame, text=0, bg="light gray",
                                 activebackground="gray90", width=2, height=2)
-                button.grid(row=r+1, column=c, sticky=NW+NE+SW+SE+N+S+E+W)
+                button.grid(row=row+1, column=col, sticky=NW+NE+SW+SE+N+S+E+W)
                 row.append(button)
             device_buttons.append(row)
 
-        def change_device_grid_value(r, c):
-            if self._devices_grid[r][c] == 1:
-                self._devices_grid[r][c] = 0
-                device_buttons[r][c].config(
+        def change_device_grid_value(row, col):
+            if self._devices_grid[row][col] == 1:
+                self._devices_grid[row][col] = 0
+                device_buttons[row][col].config(
                     text="0", bg="light gray", activebackground="gray90")
                 return
-            self._devices_grid[r][c] = 1
-            device_buttons[r][c].config(
+            self._devices_grid[row][col] = 1
+            device_buttons[row][col].config(
                 text="1", bg="deep sky blue", activebackground="light sky blue")
 
         for row in range(self._grid_size):
@@ -556,70 +592,70 @@ class GUI():
 
         # Select row buttons
         row_buttons = []
-        for r in range(self._grid_size):
-            button = Button(f, text="Select Row")
-            button.grid(row=r+1, column=8, sticky=NW+NE+SW+SE+N+S+E+W)
+        for row in range(self._grid_size):
+            button = Button(frame, text="Select Row")
+            button.grid(row=row+1, column=8, sticky=NW+NE+SW+SE+N+S+E+W)
             row_buttons.append(button)
 
-        def select_row(r):
-            if row_buttons[r]["text"] == "Select Row":
-                row_buttons[r]["text"] = "Deselect Row"
-                for c in range(self._grid_size):
-                    self._devices_grid[c][r] = 1
-                    device_buttons[c][r].config(
+        def select_row(row):
+            if row_buttons[row]["text"] == "Select Row":
+                row_buttons[row]["text"] = "Deselect Row"
+                for col in range(self._grid_size):
+                    self._devices_grid[col][row] = 1
+                    device_buttons[col][row].config(
                         text="1", bg="deep sky blue", activebackground="light sky blue")
             else:
-                row_buttons[r]["text"] = "Select Row"
-                for c in range(self._grid_size):
-                    self._devices_grid[c][r] = 0
-                    device_buttons[c][r].config(
+                row_buttons[row]["text"] = "Select Row"
+                for col in range(self._grid_size):
+                    self._devices_grid[col][row] = 0
+                    device_buttons[col][row].config(
                         text="0", bg="light gray", activebackground="gray90")
 
-        for row in range(len(row_buttons)):
-            row_buttons[row].config(command=lambda row=row: select_row(row))
+        for row, button in enumerate(row_buttons):
+            button.config(command=lambda row=row: select_row(row))
 
         # Select column buttons
         col_buttons = []
-        for c in range(self._grid_size):
-            button = Button(f, text="Select\nColumn")
-            button.grid(row=9, column=c, sticky=NW+NE+SW+SE+N+S+E+W)
+        for col in range(self._grid_size):
+            button = Button(frame, text="Select\nColumn")
+            button.grid(row=9, column=col, sticky=NW+NE+SW+SE+N+S+E+W)
             col_buttons.append(button)
 
-        def select_col(c):
-            if col_buttons[c]["text"] == "Select\nColumn":
-                col_buttons[c]["text"] = "Deselect\nColumn"
-                for r in range(self._grid_size):
-                    self._devices_grid[c][r] = 1
-                    device_buttons[c][r].config(
+        def select_col(col):
+            if col_buttons[col]["text"] == "Select\nColumn":
+                col_buttons[col]["text"] = "Deselect\nColumn"
+                for row in range(self._grid_size):
+                    self._devices_grid[col][row] = 1
+                    device_buttons[col][row].config(
                         text="1", bg="deep sky blue", activebackground="light sky blue")
             else:
-                col_buttons[c]["text"] = "Select\nColumn"
-                for r in range(self._grid_size):
-                    self._devices_grid[c][r] = 0
-                    device_buttons[c][r].config(
+                col_buttons[col]["text"] = "Select\nColumn"
+                for row in range(self._grid_size):
+                    self._devices_grid[col][row] = 0
+                    device_buttons[col][row].config(
                         text="0", bg="light gray", activebackground="gray90")
 
-        for col in range(len(col_buttons)):
-            col_buttons[col].config(command=lambda col=col: select_col(col))
+        for col, button in enumerate(col_buttons):
+            button.config(command=lambda col=col: select_col(col))
 
         # Select all button
-        select_all_button = Button(f, text="Select All")
+        select_all_button = Button(frame, text="Select All")
         select_all_button.grid(column=8, row=9)
 
         def select_all():
             if select_all_button["text"] == "Select All":
                 select_all_button["text"] = "Deselect All"
-                for c in range(self._grid_size):
-                    for r in range(self._grid_size):
-                        self._devices_grid[c][r] = 1
-                        device_buttons[c][r].config(
+                for col in range(self._grid_size):
+                    for row in range(self._grid_size):
+                        self._devices_grid[col][row] = 1
+                        device_buttons[col][row].config(
                             text="1", bg="deep sky blue", activebackground="light sky blue")
             else:
                 select_all_button["text"] = "Select All"
-                for c in range(self._grid_size):
-                    for r in range(self._grid_size):
-                        self._devices_grid[c][r] = 0
-                        device_buttons[c][r].config(
+                for col in range(self._grid_size):
+                    for row in range(self._grid_size):
+                        self._devices_grid[col][row] = 0
+                        device_buttons[col][row].config(
                             text="0", bg="light gray", activebackground="gray90")
 
         select_all_button.config(command=select_all)
@@ -637,9 +673,9 @@ class GUI():
                 # Create new window
                 window = Toplevel()
                 # Ensure window always shows up in the same space
-                x = self._root.winfo_x()
-                y = self._root.winfo_y()
-                window.geometry("+%d+%d" % (x + 600, y + 400))
+                pos_x = self._root.winfo_x()
+                pos_y = self._root.winfo_y()
+                window.geometry(f"+{pos_x+600}+{pos_y+400}")
                 # Populate window
                 label1 = Label(window, text="Enter preset name:")
                 label1.grid(column=0, row=0)
@@ -648,7 +684,8 @@ class GUI():
                 label2 = Label(window, text="When finished, exit the window.")
                 label2.grid(column=0, row=2)
                 label3 = Label(
-                    window, text="Note: You can rewrite an old preset by\nassigning a new preset the same name")
+                    window, text="Note: You can rewrite an old preset by\n \
+                                  assigning a new preset the same name")
                 label3.grid(column=0, row=4, pady=15)
 
             preset_window()
@@ -661,9 +698,9 @@ class GUI():
                     "Preset Warning", "You must provide a name for the preset")
             else:
                 # Turn grid config into pandas DataFrame for use of to_csv
-                df = pd.DataFrame(self._devices_grid)
-                df.to_csv(f"DevicePresets/{preset_name}.csv",
-                          header=False, index=False)
+                dataframe = pd.DataFrame(self._devices_grid)
+                dataframe.to_csv(f"DevicePresets/{preset_name}.csv",
+                                 header=False, index=False)
                 # Update list of presets on main window
                 update_preset_list()
 
@@ -672,55 +709,55 @@ class GUI():
             Read from csv file of selected preset and update current grid config to match
             '''
             preset_name = selected_preset.get()
-            df = pd.read_csv(
+            dataframe = pd.read_csv(
                 f"DevicePresets/{preset_name}.csv", header=None, index_col=None)
-            for c in range(self._grid_size):
-                for r in range(self._grid_size):
-                    if df[r][c] == 1:
-                        self._devices_grid[c][r] = 1
-                        device_buttons[c][r].config(
+            for col in range(self._grid_size):
+                for row in range(self._grid_size):
+                    if dataframe[row][col] == 1:
+                        self._devices_grid[col][row] = 1
+                        device_buttons[col][row].config(
                             text="1", bg="deep sky blue", activebackground="light sky blue")
                     else:
-                        self._devices_grid[c][r] = 0
-                        device_buttons[c][r].config(
+                        self._devices_grid[col][row] = 0
+                        device_buttons[col][row].config(
                             text="0", bg="light gray", activebackground="gray90")
 
         save_preset_button = Button(
-            f, text="save preset", command=store_preset)
+            frame, text="save preset", command=store_preset)
         save_preset_button.grid(column=9, row=3)
 
         selected_preset = StringVar()
-        presets = ttk.Combobox(f, width=27, textvariable=selected_preset)
+        presets = ttk.Combobox(frame, width=27, textvariable=selected_preset)
         presets.grid(column=9, row=1)
 
         # Create a list of files in DevicePresets folder
 
         def update_preset_list():
             preset_list = os.listdir("DevicePresets/")
-            for i in range(len(preset_list)):
-                preset_list[i] = preset_list[i][0:-4]
+            for _, preset_name in enumerate(preset_list):
+                preset_name = preset_name[0:-4]
             return preset_list
 
         # Adding list to presets combobox
         presets['values'] = update_preset_list()
 
         load_preset_button = Button(
-            f, text="load preset", command=lambda: load_preset())
+            frame, text="load preset", command=lambda: load_preset())
         load_preset_button.grid(column=9, row=5)
 
         # Try to load most recent grid layout
         try:
-            df = pd.read_csv(
+            dataframe = pd.read_csv(
                 "device_grid_last_vals.csv", header=None, index_col=None)
-            for c in range(self._grid_size):
-                for r in range(self._grid_size):
-                    if df[r][c] == 1:
-                        self._devices_grid[c][r] = 1
-                        device_buttons[c][r].config(
+            for col in range(self._grid_size):
+                for row in range(self._grid_size):
+                    if dataframe[row][col] == 1:
+                        self._devices_grid[col][row] = 1
+                        device_buttons[col][row].config(
                             text="1", bg="deep sky blue", activebackground="light sky blue")
                     else:
-                        self._devices_grid[c][r] = 0
-                        device_buttons[c][r].config(
+                        self._devices_grid[col][row] = 0
+                        device_buttons[col][row].config(
                             text="0", bg="light gray", activebackground="gray90")
         except:
             print("No previous data available")
@@ -750,9 +787,9 @@ class GUI():
             # Create new window
             window = Toplevel()
             # Ensure window always shows up in the same space
-            x = self._root.winfo_x()
-            y = self._root.winfo_y()
-            window.geometry("+%d+%d" % (x + 50, y + 50))
+            pos_x = self._root.winfo_x()
+            pos_y = self._root.winfo_y()
+            window.geometry(f"+{pos_x+50}+{pos_y+50}")
 
             # Populate window with IVTest options
             self.iv_frame_create(window)
@@ -760,7 +797,7 @@ class GUI():
             # Wait to do anything else until popup window is closed
             self._root.wait_window(window)
             # Make new IVTest object
-            iv = tests.IVTest(
+            iv_test = tests.IVTest(
                 grid=self._devices_grid,
                 test_num=self._iv_test_num,
                 chiplet_name=self._chiplet_name.get(),
@@ -778,7 +815,7 @@ class GUI():
 
             test_lb.insert(END, f"IV Test {self._iv_test_num}")
             self._iv_test_num += 1
-            self._tests_requested.append(iv)
+            self._tests_requested.append(iv_test)
 
         def add_et(*args):
             '''
@@ -787,9 +824,9 @@ class GUI():
             # Create new window
             window = Toplevel()
             # Ensure window always shows up in the same space
-            x = self._root.winfo_x()
-            y = self._root.winfo_y()
-            window.geometry(f"+{x+50}+{y+50}")
+            pos_x = self._root.winfo_x()
+            pos_y = self._root.winfo_y()
+            window.geometry(f"+{pos_x+50}+{pos_y+50}")
 
             # Populate window with IVTest options
             self.et_frame_create(window)
@@ -797,7 +834,7 @@ class GUI():
             # Wait to do anything else until popup window is closed
             self._root.wait_window(window)
             # Make new EnduranceTest object
-            et = tests.EnduranceTest(
+            endurance_test = tests.EnduranceTest(
                 grid=self._devices_grid,
                 test_num=self._et_test_num,
                 chiplet_name=self._chiplet_name.get(),
@@ -812,7 +849,7 @@ class GUI():
 
             test_lb.insert(END, f"Endurance Test {self._et_test_num}")
             self._et_test_num += 1
-            self._tests_requested.append(et)
+            self._tests_requested.append(endurance_test)
 
         def add_set(*args):
             '''
@@ -834,11 +871,12 @@ class GUI():
             self._tests_requested = []
 
         # Chip name box
-        t = ttk.Frame(self._root, padding=(12, 5, 12, 0))
-        t.grid(column=4, columnspan=2, row=0, rowspan=4, sticky=(N, W, E, S))
-        t.configure(borderwidth=5, relief='raised')
-        chiplet_name_label = Label(t, text="Chiplet Name/Identifier:")
-        chiplet_name_entry = Entry(t, textvariable=chiplet_name)
+        name_frame = ttk.Frame(self._root, padding=(12, 5, 12, 0))
+        name_frame.grid(column=4, columnspan=2, row=0,
+                        rowspan=4, sticky=(N, W, E, S))
+        name_frame.configure(borderwidth=5, relief='raised')
+        chiplet_name_label = Label(name_frame, text="Chiplet Name/Identifier:")
+        chiplet_name_entry = Entry(name_frame, textvariable=chiplet_name)
         chiplet_name_label.grid(column=0, row=0, pady=15)
         chiplet_name_entry.grid(column=0, row=1, pady=15)
 
@@ -846,16 +884,19 @@ class GUI():
         self.device_select_frame_create(self._root, col=0, row=0)
 
         # Test queue box
-        f = ttk.Frame(self._root, padding=(12, 5, 12, 0))
-        f.grid(column=2, columnspan=2, row=0, rowspan=4, sticky=(N, W, E, S))
-        f.configure(borderwidth=5, relief='raised')
-        test_lb = Listbox(f, selectmode="BROWSE")
-        test_lb_label = Label(f, text="Test Queue:")
-        add_set_button = Button(f, text="Set", command=add_set)
-        add_reset_button = Button(f, text="Reset", command=add_reset)
-        add_iv_button = Button(f, text="Add IV Test", command=add_iv)
-        add_et_button = Button(f, text="Add Endurance Test", command=add_et)
-        clear_lb_button = Button(f, text="Clear Test Queue", command=clear_lb)
+        frame = ttk.Frame(self._root, padding=(12, 5, 12, 0))
+        frame.grid(column=2, columnspan=2, row=0,
+                   rowspan=4, sticky=(N, W, E, S))
+        frame.configure(borderwidth=5, relief='raised')
+        test_lb = Listbox(frame, selectmode="BROWSE")
+        test_lb_label = Label(frame, text="Test Queue:")
+        add_set_button = Button(frame, text="Set", command=add_set)
+        add_reset_button = Button(frame, text="Reset", command=add_reset)
+        add_iv_button = Button(frame, text="Add IV Test", command=add_iv)
+        add_et_button = Button(
+            frame, text="Add Endurance Test", command=add_et)
+        clear_lb_button = Button(
+            frame, text="Clear Test Queue", command=clear_lb)
 
         test_lb_label.grid(column=1, columnspan=2, row=0)
         test_lb.grid(column=1, columnspan=2, row=1, rowspan=4)
@@ -867,10 +908,14 @@ class GUI():
 
         # Run button
         button = Button(self._root, text="Run",
-                        command=self.set_values, width=25, height=3, background="red", activebackground="tomato")
+                        command=self.set_values, width=25, height=3, background="red",
+                        activebackground="tomato")
         button.grid(column=4, columnspan=2, row=4, rowspan=2, padx=0)
 
     def define_progress_interval(self):
+        '''
+        Returns a double from 0 to 100 that is the size a single progressbar step should be
+        '''
         num_intervals = 0.0
         try:
             for test in self._tests_requested:
@@ -914,8 +959,9 @@ class GUI():
             json.dump(dictionary, outfile)
 
         # Save device grid
-        df = pd.DataFrame(self._devices_grid)
-        df.to_csv("device_grid_last_vals.csv", header=False, index=False)
+        dataframe = pd.DataFrame(self._devices_grid)
+        dataframe.to_csv("device_grid_last_vals.csv",
+                         header=False, index=False)
 
         self._root.destroy()
 

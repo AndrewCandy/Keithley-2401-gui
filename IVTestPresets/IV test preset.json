@@ -1,0 +1,1 @@
+{"iv_range": "BEST", "iv_mode": "SWE", "iv_space": "LIN", "iv_source_voltage": 3.5, "iv_source_delay": 0.03, "iv_source_voltage_start": 0.0, "iv_source_voltage_stop": 3.5, "iv_log_num_steps": 42, "iv_current_compliance": 0.01, "iv_is_up_down": true, "iv_accuracy": 0.01}

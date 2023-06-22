@@ -1,6 +1,8 @@
+"""
+Module for creating the post test gui
+"""
 from tkinter import *
 from tkinter import ttk
-# from tkinter import messagebox
 import matplotlib.pyplot as plt
 import pandas as pd
 import functions
@@ -131,10 +133,10 @@ class ResultsGUI():
         ds_label.configure(font=("Arial", 28))
         ds_label.grid(column=0, columnspan=8, row=0)
 
-        # filename = self.get_filename()
-
-        df = pd.read_excel("_Col5_Row3.xlsx")  # filename) #changed for testing
-        stats_df = df[["Voltage", "Current", "Real Resistance"]].describe()
+        filename = self.get_filename()
+        dataframe = pd.read_excel(filename)
+        stats_df = dataframe[["Voltage", "Current",
+                              "Real Resistance"]].describe()
 
         stats_info = Label(frame, text=stats_df.to_string())
         stats_info.grid(column=0, row=1)
@@ -143,10 +145,10 @@ class ResultsGUI():
         '''
         Creates a new window containing an IV graph for the selected device
         '''
-        # filename = self.get_filename()
-        df = pd.read_excel("_Col5_Row3.xlsx")
+        filename = self.get_filename()
+        dataframe = pd.read_excel(filename)
 
-        plt.plot(df["Voltage"], df["Current"])
+        plt.plot(dataframe["Voltage"], dataframe["Current"])
         plt.xlabel("Voltage")
         plt.ylabel("Current")
         plt.title(f"IV for device {self._selected_device_name.get()}")
@@ -167,18 +169,28 @@ class ResultsGUI():
         ds_label.configure(font=("Arial", 28))
         ds_label.grid(column=0, columnspan=8, row=0)
 
-        # filename = self.get_filename()
-        df = pd.read_excel("_Col5_Row3.xlsx")  # filename) #changed for testing
+        filename = self.get_filename()
+        dataframe = pd.read_excel(filename)
+        hrs = functions.find_hrs(dataframe)
+        lrs = functions.find_lrs(dataframe)
+        dataframe = pd.DataFrame(columns=['HRS', 'LRS'])
+        dataframe['HRS'] = hrs
+        dataframe['LRS'] = lrs
+
+        stats_df = dataframe.describe()
+
+        stats_info = Label(frame, text=stats_df.to_string())
+        stats_info.grid(column=0, row=1)
 
     def create_endurance_graph(self):
         '''
         Creates a new window containing a scatter of hrs and lrs resistances for the selected device
         '''
-        # filename = self.get_filename()
-        df = pd.read_excel("_Col3_Row5.xlsx")
+        filename = self.get_filename()
+        dataframe = pd.read_excel(filename)
 
-        hrs = functions.find_hrs(df)
-        lrs = functions.find_lrs(df)
+        hrs = functions.find_hrs(dataframe)
+        lrs = functions.find_lrs(dataframe)
 
         plt.scatter(range(len(hrs)), hrs)
         plt.scatter(range(len(lrs)), lrs)
@@ -187,16 +199,3 @@ class ResultsGUI():
         plt.title(f"HRS vs LRS for device {self._selected_device_name.get()}")
         plt.legend(["HRS", "LRS"])
         plt.show()
-
-    # def create_iv_cumulative_stats(self):
-    #     '''
-    #     '''
-
-    # def create_endurance_cumulative_stats(self):
-    #     '''
-    #     '''
-
-
-gui = ResultsGUI([])
-gui.create_endurance_graph()
-# gui.gui_start()

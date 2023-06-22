@@ -1,13 +1,16 @@
-import itertools
-import tests
+"""
+Module containing helper functions and functions that write messages to the sourcemeter device
+"""
 import os
-import time
-# Linear Staircase
 
 
-def Staircase_Lin(instrument, current_compliance, source_voltage,
+def staircase_lin(instrument, current_compliance, source_voltage,
                   source_delay, source_voltage_start, source_voltage_stop,
                   source_voltage_step, trig_count):
+    '''
+    Instructions to be sent to the sourcemeter
+    Returns a string containing all the data received from sourcemeter
+    '''
     # UP
     instrument.timeout = 100000
     instrument.write("SYST:REM")
@@ -39,7 +42,7 @@ def Staircase_Lin(instrument, current_compliance, source_voltage,
     instrument.write(f':SOUR:VOLT:STEP {source_voltage_step*-1}')
     instrument.write(f':TRIG:COUN {trig_count}')
     instrument.write(':OUTP ON')
-    measure_down = (instrument.query(':READ?'))
+    measure_down = instrument.query(':READ?')
     measure = measure + ',' + measure_down[:-1]
     # ZERO
     instrument.write(':SENS:VOLT:NPLC 1')
@@ -65,7 +68,7 @@ def Staircase_Lin(instrument, current_compliance, source_voltage,
     instrument.write(f':SOUR:VOLT:STEP {source_voltage_step*-1}')
     instrument.write(':TRIG:COUN 16')
     instrument.write(':OUTP ON')
-    measure_down_again = (instrument.query(':READ?'))
+    measure_down_again = instrument.query(':READ?')
     measure = measure + ',' + measure_down_again[:-1]
 
     instrument.write(':SENS:VOLT:NPLC 1')
@@ -75,12 +78,12 @@ def Staircase_Lin(instrument, current_compliance, source_voltage,
     instrument.write(':SOUR:SWE:RANG BEST')
     instrument.write(':SOUR:VOLT:MODE SWE')
     instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(f':SOUR:VOLT:STAR -1.5')
-    instrument.write(f':SOUR:VOLT:STOP 0')
+    instrument.write(':SOUR:VOLT:STAR -1.5')
+    instrument.write(':SOUR:VOLT:STOP 0')
     instrument.write(f':SOUR:VOLT:STEP {source_voltage_step}')
-    instrument.write(f':TRIG:COUN 16')
+    instrument.write(':TRIG:COUN 16')
     instrument.write(':OUTP ON')
-    measure_up = (instrument.query(':READ?'))
+    measure_up = instrument.query(':READ?')
     measure = measure + ',' + measure_up[:-1]
     print("Measurements " + str(measure))
     return measure
@@ -89,9 +92,13 @@ def Staircase_Lin(instrument, current_compliance, source_voltage,
 # When working with log source voltage cannot be 0
 
 
-def Staircase_Log(instrument, is_up_down, current_compliance, source_voltage,
+def staircase_log(instrument, is_up_down, current_compliance, source_voltage,
                   source_delay, source_voltage_start, source_voltage_stop,
                   log_num_steps, trig_count):
+    '''
+    Instructions to be sent to the sourcemeter
+    Returns a string containing all the data received from sourcemeter
+    '''
     instrument.timeout = 10000
     instrument.write("SYST:REM")
     instrument.write('*RST')
@@ -110,7 +117,7 @@ def Staircase_Log(instrument, is_up_down, current_compliance, source_voltage,
     measure = instrument.query(':READ?')[:-1]
     print(measure)
 
-    if (is_up_down):
+    if is_up_down:
         instrument.write(':SENS:VOLT:NPLC 0.1')
         instrument.write(f':SENS:CURR:PROT {current_compliance}')
         instrument.write(f':SOUR:VOLT {source_voltage_stop}')
@@ -123,149 +130,19 @@ def Staircase_Log(instrument, is_up_down, current_compliance, source_voltage,
         instrument.write(f':SOUR:SWE:POIN {log_num_steps}')
         instrument.write(f':TRIG:COUN {trig_count}')
         instrument.write(':OUTP ON')
-        measure_down = (instrument.query(':READ?'))
+        measure_down = instrument.query(':READ?')
         measure = measure + ',' + measure_down[:-1]
         print(type(measure))
     print("Measurements " + str(measure))
     return measure
 
 
-def endurance_Test_Old(instrument, current_compliance, source_voltage,
-                       source_delay):
-    instrument.timeout = 100000
-    # SET -- Up
-    instrument.write("SYST:REM")
-    instrument.write('*RST')
-    instrument.write(':SYST:BEEP:STAT 0')
-    instrument.write(':SENS:VOLT:NPLC 1')
-    instrument.write(f':SENS:CURR:PROT {current_compliance}')
-    instrument.write(':SOUR:VOLT 0')
-    instrument.write(f':SOUR:DEL {source_delay}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR 0')
-    instrument.write(':SOUR:VOLT:STOP 2.5')
-    instrument.write(':SOUR:VOLT:STEP 0.1')
-    instrument.write(':TRIG:COUN 26')
-    instrument.write(':OUTP ON')
-    measure = []
-
-    # SET -- Down
-    instrument.write(':SENS:VOLT:NPLC 1')
-    instrument.write(f':SENS:CURR:PROT {current_compliance}')
-    instrument.write(':SOUR:VOLT 2.5')
-    instrument.write(f':SOUR:DEL {source_delay}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR 2.5')
-    instrument.write(':SOUR:VOLT:STOP 0')
-    instrument.write(':SOUR:VOLT:STEP -0.1')
-    instrument.write(':TRIG:COUN 26')
-    instrument.write(':OUTP ON')
-
-    # READ -- Up
-
-    instrument.write('*RST')
-    instrument.write(':SYST:BEEP:STAT 0')
-    instrument.write(':SENS:VOLT:NPLC 1')
-    instrument.write(f':SENS:CURR:PROT {current_compliance}')
-    instrument.write(':SOUR:VOLT 0')
-    instrument.write(f':SOUR:DEL {source_delay}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR 0')
-    instrument.write(':SOUR:VOLT:STOP 0.2')
-    instrument.write(':SOUR:VOLT:STEP 0.1')
-    instrument.write(':TRIG:COUN 3')
-    instrument.write(':OUTP ON')
-    measure = instrument.query(':READ?')[:-1]
-    # READ -- Down
-    instrument.write(':SENS:VOLT:NPLC 1')
-    instrument.write(f':SENS:CURR:PROT {current_compliance}')
-    instrument.write(':SOUR:VOLT 0.2')
-    instrument.write(f':SOUR:DEL {source_delay}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR 0.2')
-    instrument.write(':SOUR:VOLT:STOP 0')
-    instrument.write(':SOUR:VOLT:STEP -0.1')
-    instrument.write(':TRIG:COUN 3')
-    instrument.write(':OUTP ON')
-    measure_down = (instrument.query(':READ?'))
-    measure = measure + ',' + measure_down[:-1]
-
-    # RESET -- Down
-
-    instrument.write('*RST')
-    instrument.write(':SYST:BEEP:STAT 0')
-    instrument.write(':SENS:VOLT:NPLC 1')
-    instrument.write(f':SENS:CURR:PROT {current_compliance}')
-    instrument.write(':SOUR:VOLT 0')
-    instrument.write(f':SOUR:DEL {source_delay}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR 0')
-    instrument.write(':SOUR:VOLT:STOP -1.5')
-    instrument.write(':SOUR:VOLT:STEP -0.1')
-    instrument.write(':TRIG:COUN 16')
-    instrument.write(':OUTP OFF')
-    # RESET -- Up
-    instrument.write(':SENS:VOLT:NPLC 1')
-    instrument.write(f':SENS:CURR:PROT {current_compliance}')
-    instrument.write(':SOUR:VOLT -1.5')
-    instrument.write(f':SOUR:DEL {source_delay}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR -1.5')
-    instrument.write(':SOUR:VOLT:STOP 0')
-    instrument.write(':SOUR:VOLT:STEP 0.1')
-    instrument.write(':TRIG:COUN 16')
-    instrument.write(':OUTP OFF')
-
-    # READ -- Up
-
-    instrument.write('*RST')
-    instrument.write(':SYST:BEEP:STAT 0')
-    instrument.write(':SENS:VOLT:NPLC 1')
-    instrument.write(f':SENS:CURR:PROT {current_compliance}')
-    instrument.write(':SOUR:VOLT 0')
-    instrument.write(f':SOUR:DEL {source_delay}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR 0')
-    instrument.write(':SOUR:VOLT:STOP 0.2')
-    instrument.write(':SOUR:VOLT:STEP 0.1')
-    instrument.write(':TRIG:COUN 3')
-    instrument.write(':OUTP ON')
-    measure_up = instrument.query(':READ?')[:-1]
-    measure = measure + ',' + measure_up
-    # READ -- Down
-    instrument.write(':SENS:VOLT:NPLC 1')
-    instrument.write(f':SENS:CURR:PROT {current_compliance}')
-    instrument.write(':SOUR:VOLT 0.2')
-    instrument.write(f':SOUR:DEL {source_delay}')
-    instrument.write(':SOUR:SWE:RANG BEST')
-    instrument.write(':SOUR:VOLT:MODE SWE')
-    instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR 0.2')
-    instrument.write(':SOUR:VOLT:STOP 0')
-    instrument.write(':SOUR:VOLT:STEP -0.1')
-    instrument.write(':TRIG:COUN 3')
-    instrument.write(':OUTP ON')
-    measure_down_again = (instrument.query(':READ?'))[:-1]
-    measure = measure + ',' + measure_down_again
-    print("Measurements " + str(measure))
-    return measure
-
-
-def endurance_Test(instrument, current_compliance, source_voltage, source_delay, voltage_list, list_length):
+def endurance_test(instrument, current_compliance, source_voltage,
+                   source_delay, voltage_list, list_length):
+    '''
+    Instructions to be sent to the sourcemeter
+    Returns a string containing all the data received from sourcemeter
+    '''
     instrument.timeout = 10000
     instrument.write("SYST:REM")
     instrument.write('*RST')
@@ -284,6 +161,9 @@ def endurance_Test(instrument, current_compliance, source_voltage, source_delay,
 
 
 def create_voltage_list(set_voltage, read_voltage, reset_voltage):
+    '''
+    creates the list of voltages for 5 cycles of the endurance test
+    '''
     voltage = []
     i = 0
     for j in range(1, 6):
@@ -303,33 +183,17 @@ def create_voltage_list(set_voltage, read_voltage, reset_voltage):
     return volt_string
 
 
-def calcTrigCount(source_voltage_stop, source_voltage_start, source_voltage_step, log_num_steps, iv_space):
-    if (iv_space == 'LIN'):
-        trig_Count = (source_voltage_stop-source_voltage_start) / \
+def calc_trig_count(source_voltage_stop, source_voltage_start,
+                    source_voltage_step, log_num_steps, iv_space):
+    '''
+    Calculates the trigger count for different iv tests
+    '''
+    if iv_space == 'LIN':
+        trig_count = (source_voltage_stop-source_voltage_start) / \
             source_voltage_step
-    elif (iv_space == 'LOG'):
-        trig_Count = log_num_steps
-    return trig_Count
-
-
-def write_test_type(test):
-    '''
-    Returns:
-        a string describing conducted test to be used in making file name
-    '''
-    # Create test name for file naming
-    test_type = ""
-    if isinstance(test, tests.IVTest):
-        # Lin or log
-        if test.get_voltage_space == 'LIN':
-            test_type += "Linear_"
-        elif test.get_voltage_space == 'LOG':
-            test_type += "Logarithmic_"
-        # Show it was an IV
-        test_type += "IV"
-    elif isinstance(test, tests.EnduranceTest):
-        test_type += "Endurance"
-    return test_type
+    elif iv_space == 'LOG':
+        trig_count = log_num_steps
+    return trig_count
 
 
 def create_test_folder(test):
