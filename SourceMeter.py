@@ -1,19 +1,17 @@
-from openpyxl import load_workbook
-from openpyxl import Workbook
-from openpyxl.cell import WriteOnlyCell
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.utils import FORMULAE
-from collections import namedtuple
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import xlwings as xw
 import pyvisa
+import csv
+import matplotlib.pyplot as plt
+from collections import namedtuple
 import gui
+import post_test_gui
+import time
 import microserial
 import functions
+import numpy as np
+import pandas as pd
+import statistics
 import tests
-import post_test_gui
+import os
 # Test and features to add:
 # Forming Pulse, Endurance Test
 # Limits to each variable are as follows: When in Lin Voltage: 0-3.5V, Current:0-1A,
@@ -82,36 +80,29 @@ class SourceMeter():
             self._ran_tests.append(ran_test)
 
     # The function that loops though everything
+
     def create_excel_sheets(self):
         '''
         Create an excel sheet containing relevant statistics and all test data
         for each test
         '''
         sheet_name = "Sheet1"
-
+        folder_path = functions.create_test_folder(
+            self._gui.get_requested_tests()[0])
+        master_file = os.path.join(folder_path, 'Summary.xlsx')
         for ran_test in self._ran_tests:
             test = ran_test.test
             device_test_list = ran_test.device_test_list
-            folder_path = functions.create_test_folder(test)
+            test_type = test.get_test_type()
             for device_test in device_test_list:
                 col = device_test.x
                 row = device_test.y
                 data = device_test.data
                 dataframe = create_dataframe(data)
-                filename = f'{folder_path}\{test.get_chip_name()}_Col{col}_Row{row}.xlsx'
-                print('hi')
+                filename = f'{folder_path}\{test.chiplet_name}_{test_type}_Col{col}_Row{row}.xlsx'
                 save_to_excel(dataframe, filename)
-                print('hey')
-                if isinstance(test, tests.IVTest):
-                    set_voltage, reset_voltage = find_set_reset(dataframe)
-                    add_integer_to_excel(
-                        filename, sheet_name, 'I11', 'Largest_Current_Diff_Set', set_voltage)
-                    add_integer_to_excel(
-                        filename, sheet_name, 'J11', 'Largest_Current_Diff_Reset', reset_voltage)
-                elif isinstance(test, tests.EnduranceTest):
-                    # These functions now return a list not a 1 column dataframe
-                    hrs = functions.find_hrs(dataframe)
-                    lrs = functions.find_lrs(dataframe)
+            create_master_excel(master_file, ran_test, folder_path)
+        # merge_excel_sheets(folder_path,test)
 
     def run_post_test_gui(self):
         '''
@@ -129,6 +120,7 @@ def create_dataframe(data_string):
     return:
         a pandas dataframe object containing the data from a sourcemeter test
     '''
+
     measurements = data_string.split(',')
     # Reshape the measurements into a 2D array with 5 columns
     reshaped_values = np.reshape(measurements, (-1, 5))
@@ -182,48 +174,46 @@ def save_to_excel(dataframe, name):
             workbook.sheets(sheet_name).range(cell_target).options(
                 pd.DataFrame, index=True).value = dataframe
         workbook.save()
-    '''
+'''
 
 
-def add_integer_to_excel(filename, sheet_name, cell_target, header, value):
-    '''
-    '''
-    with xw.App(visible=False) as app:
-        workbook = app.books.open(filename)
-        sheet = workbook.sheets[sheet_name]
-        # Write the header
-        sheet.range(cell_target).value = header
-        # Write the value below the header
-        sheet.range(cell_target).offset(row_offset=1).value = value
-        # Save and close the workbook
-        workbook.save()
+'''def write_test_type(test):
+    
+    Returns:
+        a string describing conducted test to be used in making file name
+    
+    # Create test name for file naming
+    test_type = ""
+    if isinstance(test, tests.IVTest):
+        # Lin or log
+        if test.get_voltage_space == 'LIN':
+            test_type += "Linear_"
+        elif test.get_voltage_space == 'LOG':
+            test_type += "Logarithmic_"
+        # Show it was an IV
+        test_type += "IV"
+    elif isinstance(test, tests.EnduranceTest):
+        test_type += "Endurance"
+    return test_type
 
 
-def add_list_to_excel(filename, sheet_name, target, df, header_value):
-    df_mapping = {target: df}
-    with xw.App(visible=False) as app:
-        workbook = app.books.open(filename)
-        # Add sheet if it does not exist
-        current_sheets = [sheet.name for sheet in workbook.sheets]
-        if sheet_name not in current_sheets:
-            workbook.sheets.add(sheet_name)
-        # Write dataframe to cell range
-        for cell_target, dataframe in df_mapping.items():
-            sheet = workbook.sheets(sheet_name)
-            header_range = sheet.range(cell_target)
-            header_range.value = header_value
-            data_range = header_range.offset(row_offset=1)
-            data_range.options(index=False).value = dataframe
-        workbook.save()
-
-
-'''def insert_data(file,listdata,row, col):
-    wb = xlsxwriter.Workbook(file)
-    ws = wb.add_worksheet()
-    for item in listdata:
-        ws.write(row, col, item)
-        row += 1
-    wb.close()'''
+def create_test_folder(test):
+    
+    Creates folder for all device test files of a test
+    return:
+        folder path
+    
+    test_type = write_test_type(test)
+    str_time = test.start_time.strftime("%m-%d-%Y_%H-%M-%S")
+    # Get current directory
+    home_dir = os.path.abspath(__file__)
+    current_directory = os.path.dirname(home_dir)
+    # Make new folder for test if doesn't exist
+    folder_path = os.path.join(
+        current_directory, f"SavedData\{test_type}_{str_time}")
+    os.makedirs(folder_path, exist_ok=True)
+    return folder_path
+'''
 
 
 def find_set_reset(dataframe):
@@ -239,20 +229,165 @@ def find_set_reset(dataframe):
     # / np.diff(reset_df["Voltage"])
     slopes_reset = np.diff(reset_df["Current"])
     slopes_min_index = np.argmax(slopes_reset)
-    print(slopes_max_index)
-    print(slopes_min_index)
     set_volt = set_df.iloc[slopes_max_index, 0]
     reset_volt = reset_df.iloc[slopes_min_index, 0]
     print(set_volt, ' ', reset_volt)
     return set_volt, reset_volt
 
 
-def create_blank_excel(filename):
-    dataframe = pd.DataFrame()
-    dataframe.to_excel(filename)
+def create_master_excel(filename, ran_test, folder_path):
+    '''
+        #TODO: Data to grab: TestType, Column, Row, Chip, VSet, VReset (Stats with those), HRS and LRS
+        TestParameter Length = 12
+        Name Value Length = 1
+        DataValue = 1
+        All multiplied by number of tests
+    '''
+    print(filename)
+    col_names = ['ChipName', 'Row', 'Col', 'TestType', 'Vset', 'Vreset', 'Avg. Vset', 'Std_Dev_Vset', 'Med. Vset', 'Vset 1.5IQR Upper', 'Vset 1.5IQR Lower', 'Avg. Vreset', 'Std_Dev_Vreset', 'Med. Vreset',
+                 'Vreset 1.5IQR Upper', 'Vreset 1.5IQR Lower', 'Avg. HRS', 'Std_Dev_HRS', 'Med. HRS', 'HRS 1.5IQR Upper', 'HRS 1.5IQR Lower', 'Avg. LRS', 'Std_Dev_LRS', 'Med. LRS', 'LRS 1.5IQR Upper', 'LRS 1.5IQR Lower']
+    df = pd.DataFrame(columns=col_names)
+    test = ran_test.test
+    device_test_list = ran_test.device_test_list
+    Chipname = [test.chiplet_name]*len(device_test_list)
+    test_type = [test.get_test_type()]*len(device_test_list)
+    col = []
+    row = []
+    setV = []
+    resetV = []
+    avg_LRS = []
+    avg_HRS = []
+    std_HRS = []
+    std_LRS = []
+    med_HRS = []
+    med_LRS = []
+    Percent_75_HRS = []
+    Percent_75_LRS = []
+    Percent_25_HRS = []
+    Percent_25_LRS = []
+    Upper_Range_HRS = []
+    Upper_Range_LRS = []
+    Lower_Range_HRS = []
+    Lower_Range_LRS = []
+    avg_resetVolt = []
+    avg_setVolt = []
+    std_setVolt = []
+    std_resetVolt = []
+    med_setVolt = []
+    med_resetVolt = []
+    Percent_75_setVolt = []
+    Percent_75_resetVolt = []
+    Percent_25_setVolt = []
+    Percent_25_resetVolt = []
+    Upper_Range_setVolt = []
+    Upper_Range_resetVolt = []
+    Lower_Range_setVolt = []
+    Lower_Range_resetVolt = []
+    for device_test in device_test_list:
+        col.append(device_test.x)
+        row.append(device_test.y)
+        file_path = os.path.join(
+            folder_path, f'{test.chiplet_name}_{test.get_test_type()}_Col{col[0]}_Row{row[0]}.xlsx')
+        data = pd.read_excel(os.path.normpath(file_path))
+        HRS = find_HRS(data)
+        LRS = find_LRS(data)
+        avg_HRS.append(np.mean(HRS))
+        avg_LRS.append(np.mean(LRS))
+        std_HRS.append(np.std(HRS))
+        std_LRS.append(np.std(LRS))
+        med_HRS.append(np.median(HRS))
+        med_LRS.append(np.median(LRS))
+        Percent_75_HRS.append(np.percentile(HRS, 75))
+        Percent_75_LRS.append(np.percentile(LRS, 75))
+        Percent_25_HRS.append(np.percentile(HRS, 25))
+        Percent_25_LRS.append(np.percentile(LRS, 25))
+        Upper_Range_HRS.append(np.percentile(
+            HRS, 25)-1.5*(np.percentile(HRS, 75)-np.percentile(HRS, 25)))
+        Lower_Range_HRS.append(np.percentile(
+            HRS, 75)+1.5*(np.percentile(HRS, 75)-np.percentile(HRS, 25)))
+        Upper_Range_LRS.append(np.percentile(
+            LRS, 25)-1.5*(np.percentile(LRS, 75)-np.percentile(LRS, 25)))
+        Lower_Range_LRS.append(np.percentile(
+            LRS, 75)+1.5*(np.percentile(LRS, 75)-np.percentile(LRS, 25)))
+        if (isinstance(test, tests.IVTest)):
+            setVolt, resetVolt = find_set_reset(data)
+            setV.append(setVolt)
+            resetV.append(resetVolt)
+            avg_setVolt.append(np.mean(setVolt))
+            avg_resetVolt.append(np.mean(resetVolt))
+            std_setVolt.append(np.std(setVolt))
+            std_resetVolt.append(np.std(resetVolt))
+            med_setVolt.append(np.median(setVolt))
+            med_resetVolt.append(np.median(resetVolt))
+            Percent_75_setVolt.append(np.percentile(setVolt, 75))
+            Percent_75_resetVolt.append(np.percentile(resetVolt, 75))
+            Percent_25_setVolt.append(np.percentile(setVolt, 25))
+            Percent_25_resetVolt.append(np.percentile(resetVolt, 25))
+            Upper_Range_setVolt.append(np.percentile(
+                setVolt, 25)-1.5*(np.percentile(setVolt, 75)-np.percentile(setVolt, 25)))
+            Lower_Range_setVolt.append(np.percentile(
+                setVolt, 75)+1.5*(np.percentile(setVolt, 75)-np.percentile(setVolt, 25)))
+            Upper_Range_resetVolt.append(np.percentile(
+                resetVolt, 25)-1.5*(np.percentile(resetVolt, 75)-np.percentile(resetVolt, 25)))
+            Lower_Range_resetVolt.append(np.percentile(
+                resetVolt, 75)+1.5*(np.percentile(resetVolt, 75)-np.percentile(resetVolt, 25)))
+        elif (isinstance(test, tests.EnduranceTest)):
+            setV.append(None)
+            resetV.append(None)
+            avg_setVolt.append(None)
+            avg_resetVolt.append(None)
+            std_setVolt.append(None)
+            std_resetVolt.append(None)
+            med_setVolt.append(None)
+            med_resetVolt.append(None)
+            Percent_75_setVolt.append(None)
+            Percent_75_resetVolt.append(None)
+            Percent_25_setVolt.append(None)
+            Percent_25_resetVolt.append(None)
+            Upper_Range_setVolt.append(None)
+            Lower_Range_setVolt.append(None)
+            Upper_Range_resetVolt.append(None)
+            Lower_Range_resetVolt.append(None)
+    df['ChipName'] = Chipname
+    df['Row'] = row
+    df['Col'] = col
+    df['TestType'] = test_type
+    df['Vset'] = setV
+    df['Vreset'] = resetV
+    df['Avg. HRS'] = avg_HRS
+    df['Avg. LRS'] = avg_LRS
+    df['Std_Dev_HRS'] = std_HRS
+    df['Std_Dev_LRS'] = std_LRS
+    df['Med. HRS'] = med_HRS
+    df['Med. LRS'] = med_LRS
+    df['HRS 1.5IQR Upper'] = Upper_Range_HRS
+    df['LRS 1.5IQR Upper'] = Upper_Range_LRS
+    df['HRS 1.5IQR Lower'] = Lower_Range_HRS
+    df['LRS 1.5IQR Lower'] = Lower_Range_LRS
+    df['Avg. Vset'] = avg_setVolt
+    df['Avg. Vreset'] = avg_resetVolt
+    df['Std_Dev_Vset'] = std_setVolt
+    df['Std_Dev_Vreset'] = std_resetVolt
+    df['Med. Vset'] = med_setVolt
+    df['Med. Vreset'] = med_resetVolt
+    df['Vset 1.5IQR Upper'] = Upper_Range_setVolt
+    df['Vreset 1.5IQR Upper'] = Upper_Range_resetVolt
+    df['Vset 1.5IQR Lower'] = Lower_Range_setVolt
+    df['Vreset 1.5IQR Lower'] = Lower_Range_resetVolt
+    if (os.path.exists(filename)):
+        df = pd.concat([pd.read_excel(filename), df])
+        df.to_excel(filename, index=False)
+        print(df)
+    else:
+        df.to_excel(filename, index=False)
+
+
+def calc_IQR(data):
+    IQR = np.percentile(data, 75)-np.percentile(data, 25)
+    return IQR
 
 
 sm = SourceMeter()
-# sm.run_test()
-# sm.create_excel_sheets()
+sm.run_test()
+sm.create_excel_sheets()
 sm.run_post_test_gui()
