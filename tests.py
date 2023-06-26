@@ -70,7 +70,7 @@ class IVTest(Test):
 
     def __init__(self, grid, test_num, chiplet_name, voltage_range, mode, space,
                  source_voltage, source_delay, source_voltage_start,
-                 source_voltage_stop, num_steps, current_compliance, is_up_down
+                 source_voltage_stop, num_steps, current_compliance, is_up_down, cycles
                  ):
         '''
         Initailizes the the IV_Test class and parent Test class
@@ -87,6 +87,7 @@ class IVTest(Test):
         self._trigger_count = num_steps
         self._current_compliance = current_compliance
         self._is_up_down = is_up_down
+        self._cycles = cycles
 
     def get_voltage_space(self):
         '''
@@ -107,16 +108,17 @@ class IVTest(Test):
                 self._source_voltage_stop,
                 self._num_steps
             )
-            measurements += functions.staircase_lin(
-                instrument=instrument,
-                current_compliance=self._current_compliance,
-                source_voltage=self._source_voltage,
-                source_delay=self._source_delay,
-                source_voltage_start=self._source_voltage_start,
-                source_voltage_stop=self._source_voltage_stop,
-                source_voltage_step=voltage_step,
-                trig_count=self._trigger_count
-            )
+            for _ in range(0, self._cycles):
+                measurements += functions.staircase_lin(
+                    instrument=instrument,
+                    current_compliance=self._current_compliance,
+                    source_voltage=self._source_voltage,
+                    source_delay=self._source_delay,
+                    source_voltage_start=self._source_voltage_start,
+                    source_voltage_stop=self._source_voltage_stop,
+                    source_voltage_step=voltage_step,
+                    trig_count=self._trigger_count
+                    ) + ','
         elif self._space == 'LOG':
             measurements += functions.staircase_log(
                 instrument=instrument,
@@ -129,7 +131,7 @@ class IVTest(Test):
                 log_num_steps=self._num_steps,
                 trig_count=self._trigger_count
             )
-        return measurements
+        return measurements.rstrip(',')
 
     def get_test_type(self):
         '''
@@ -193,16 +195,14 @@ class EnduranceTest(Test):
                 source_delay=self._source_delay,
                 voltage_list=voltage_list,
                 list_length=40
-            )
-        return measurements
+            ) + ','
+        return measurements.rstrip(',')
 
     def get_test_type(self):
         '''
         returns a string describing the type of test being run
         '''
         return f"Endurance_{self.test_num}"
-
-# TODO: Add class for set and reset pulses
 
 
 def calc_voltage_step(voltage_start, voltage_stop, num_steps):

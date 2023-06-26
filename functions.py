@@ -2,7 +2,7 @@
 Module containing helper functions and functions that write messages to the sourcemeter device
 """
 import os
-
+import time
 
 def staircase_lin(instrument, current_compliance, source_voltage,
                   source_delay, source_voltage_start, source_voltage_stop,
@@ -42,8 +42,8 @@ def staircase_lin(instrument, current_compliance, source_voltage,
     instrument.write(f':SOUR:VOLT:STEP {source_voltage_step*-1}')
     instrument.write(f':TRIG:COUN {trig_count}')
     instrument.write(':OUTP ON')
-    measure_down = instrument.query(':READ?')
-    measure = measure + ',' + measure_down[:-1]
+    measure_down = instrument.query(':READ?')[:-1]
+    measure = measure + ',' + measure_down
     # ZERO
     instrument.write(':SENS:VOLT:NPLC 1')
     instrument.write(f':SENS:CURR:PROT {current_compliance}')
@@ -68,8 +68,8 @@ def staircase_lin(instrument, current_compliance, source_voltage,
     instrument.write(f':SOUR:VOLT:STEP {source_voltage_step*-1}')
     instrument.write(':TRIG:COUN 16')
     instrument.write(':OUTP ON')
-    measure_down_again = instrument.query(':READ?')
-    measure = measure + ',' + measure_down_again[:-1]
+    measure_down_again = instrument.query(':READ?')[:-1]
+    measure = measure + ',' + measure_down_again
 
     instrument.write(':SENS:VOLT:NPLC 1')
     instrument.write(f':SENS:CURR:PROT {current_compliance}')
@@ -78,14 +78,13 @@ def staircase_lin(instrument, current_compliance, source_voltage,
     instrument.write(':SOUR:SWE:RANG BEST')
     instrument.write(':SOUR:VOLT:MODE SWE')
     instrument.write(':SOUR:SWE:SPAC LIN')
-    instrument.write(':SOUR:VOLT:STAR -1.5')
+    instrument.write(':SOUR:VOLT:STAR -1.4')
     instrument.write(':SOUR:VOLT:STOP 0')
     instrument.write(f':SOUR:VOLT:STEP {source_voltage_step}')
-    instrument.write(':TRIG:COUN 16')
+    instrument.write(':TRIG:COUN 15')
     instrument.write(':OUTP ON')
-    measure_up = instrument.query(':READ?')
-    measure = measure + ',' + measure_up[:-1]
-    print("Measurements " + str(measure))
+    measure_up = instrument.query(':READ?')[:-1]
+    measure = measure + ',' + measure_up
     return measure
 
 # Logarithmic Staircase
@@ -115,7 +114,6 @@ def staircase_log(instrument, is_up_down, current_compliance, source_voltage,
     instrument.write(f':TRIG:COUN {trig_count}')
     instrument.write(':OUTP ON')
     measure = instrument.query(':READ?')[:-1]
-    print(measure)
 
     if is_up_down:
         instrument.write(':SENS:VOLT:NPLC 0.1')
@@ -132,8 +130,6 @@ def staircase_log(instrument, is_up_down, current_compliance, source_voltage,
         instrument.write(':OUTP ON')
         measure_down = instrument.query(':READ?')
         measure = measure + ',' + measure_down[:-1]
-        print(type(measure))
-    print("Measurements " + str(measure))
     return measure
 
 
@@ -165,10 +161,7 @@ def create_voltage_list(set_voltage, read_voltage, reset_voltage):
     creates the list of voltages for 5 cycles of the endurance test
     '''
     voltage = []
-    i = 0
     for j in range(1, 6):
-        cycle_number = i + j
-        print("Running cycle", cycle_number)
         voltage.append(set_voltage)
         voltage.append(0)
         voltage.append(read_voltage)
@@ -177,9 +170,7 @@ def create_voltage_list(set_voltage, read_voltage, reset_voltage):
         voltage.append(0)
         voltage.append(read_voltage)
         voltage.append(0)
-    # print(voltage)
     volt_string = ', '.join(str(item) for item in voltage)
-    # print(volt_string)
     return volt_string
 
 
@@ -195,23 +186,43 @@ def calc_trig_count(source_voltage_stop, source_voltage_start,
         trig_count = log_num_steps
     return trig_count
 
-
 def create_test_folder(test):
+    """
+    Creates Folder for each test type and stores the individual excel files with in
+    """
+    test_type = test.get_test_type()
+    str_time = test.start_time.strftime("%H-%M-%S")
+    folder = create_chip_folder(test)
+    folder_path = os.path.join(folder,f'{test_type}_{str_time}')
+    os.makedirs(folder_path, exist_ok=True)
+    return folder_path
+
+
+def create_chip_folder(test): #Called once
     '''
     Creates folder for all device test files of a test
     return:
         folder path
     '''
     # Get current directory
-    home_dir = os.path.abspath(__file__)
-    current_directory = os.path.dirname(home_dir)
-    str_time = test.start_time.strftime("%m-%d-%Y_%H-%M-%S")
+    folder = create_main_folder()
     # Make new folder for test if doesn't exist
     folder_path = os.path.join(
-        current_directory, f"SavedData/{str_time}")
+        folder, f"{test.chiplet_name}")
     os.makedirs(folder_path, exist_ok=True)
     return folder_path
 
+
+def create_main_folder(): 
+    """
+    Creates Main folder for every test in a run this is where the Summary excel is stored
+    """
+    home_dir = os.path.abspath(__file__)
+    current_directory = os.path.dirname(home_dir)
+    str_time = time.strftime("%m-%d-%Y")
+    folder_path = os.path.join(current_directory,f'{str_time}')
+    os.makedirs(folder_path, exist_ok=True)
+    return folder_path
 
 def find_hrs(dataframe):
     '''

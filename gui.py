@@ -37,6 +37,7 @@ class GUI():
         self._iv_current_compliance = DoubleVar(self._root)
         self._iv_is_up_down = BooleanVar(self._root)
         self._iv_accuracy = DoubleVar(self._root)
+        self._iv_cycles = IntVar(self._root)
         self._et_set_voltage = DoubleVar(self._root)
         self._et_read_voltage = DoubleVar(self._root)
         self._et_reset_voltage = DoubleVar(self._root)
@@ -83,6 +84,7 @@ class GUI():
         current_compliance = self._iv_current_compliance
         is_up_down = self._iv_is_up_down
         accuracy = self._iv_accuracy
+        cycles = self._iv_cycles
         rangename = self._iv_range
         modename = self._iv_mode
         spacename = self._iv_space
@@ -127,6 +129,7 @@ class GUI():
                 rangename.set(saved_vals["iv_range"])
                 modename.set(saved_vals["iv_mode"])
                 spacename.set(saved_vals["iv_space"])
+                cycles.set(saved_vals("iv_cycles"))
             except:
                 print("Previous values not available.")
 
@@ -200,6 +203,10 @@ class GUI():
         )
         current_compliance_entry = Entry(
             frame, textvariable=current_compliance)
+       
+        cycles_label = Label(frame, text='Cycles')
+        cycles_scale = Scale(frame, variable=cycles, orient="horizontal",from_=0, to=100, resolution=1, showvalue=0,tickinterval=100-0)
+        cycles_entry = Entry(frame,textvariable=cycles)
 
         stairs_button_label = Label(frame, text="Stairs up and down?")
         stairs_button = Checkbutton(frame, variable=is_up_down, width=20)
@@ -254,8 +261,11 @@ class GUI():
             current_compliance_scale.grid(
                 column=4, columnspan=1, row=3, padx=10, pady=0)
 
-            stairs_button_label.grid(column=4, row=5)
-            stairs_button.grid(column=4, row=6)
+            cycles_label.grid(column=4,columnspan=1,row=4, padx=10)
+            cycles_entry.grid(column=4,columnspan=1,row=5,padx=10,pady=5)
+            cycles_scale.grid(column=4,columnspan=1,row=6, padx=10, pady=0)
+            stairs_button_label.grid(column=4, row=7)
+            stairs_button.grid(column=4, row=8)
 
         grid_assign()
 
@@ -308,7 +318,8 @@ class GUI():
                     "iv_log_num_steps": self._iv_num_steps.get(),
                     "iv_current_compliance": self._iv_current_compliance.get(),
                     "iv_is_up_down": self._iv_is_up_down.get(),
-                    "iv_accuracy": self._iv_accuracy.get()
+                    "iv_accuracy": self._iv_accuracy.get(),
+                    "iv_cycles": self._iv_cycles.get()
                 }
                 with open(f"IVTestPresets/{preset_name}.json", "w") as outfile:
                     json.dump(dictionary, outfile)
@@ -359,7 +370,7 @@ class GUI():
         source_voltage = self._et_source_voltage
         source_delay = self._et_source_delay
         source_delay_minmax = [0.0, .25]
-        source_voltage_minmax = [0.0, 3.5]
+        source_voltage_minmax = [-1.5, 3.5]
         current_minmax = [0.0, 0.01]
         cycles_minmax = [5, 500]
 
@@ -567,13 +578,13 @@ class GUI():
         # Create and place widgets for device selection
         device_buttons = []
         for col in range(self._grid_size):
-            row = []
+            row_list = []
             for row in range(self._grid_size):
                 button = Button(frame, text=0, bg="light gray",
                                 activebackground="gray90", width=2, height=2)
                 button.grid(row=row+1, column=col, sticky=NW+NE+SW+SE+N+S+E+W)
-                row.append(button)
-            device_buttons.append(row)
+                row_list.append(button)
+            device_buttons.append(row_list)
 
         def change_device_grid_value(row, col):
             if self._devices_grid[row][col] == 1:
@@ -810,8 +821,10 @@ class GUI():
                 source_voltage_stop=self._iv_source_voltage_stop.get(),
                 num_steps=self._iv_num_steps.get(),
                 current_compliance=self._iv_current_compliance.get(),
-                is_up_down=self._iv_is_up_down.get()
-            )
+                is_up_down=self._iv_is_up_down.get(),
+                cycles= self._iv_cycles.get()
+                            
+                                        )
 
             test_lb.insert(END, f"IV Test {self._iv_test_num}")
             self._iv_test_num += 1
@@ -946,6 +959,7 @@ class GUI():
             "iv_current_compliance": self._iv_current_compliance.get(),
             "iv_is_up_down": self._iv_is_up_down.get(),
             "iv_accuracy": self._iv_accuracy.get(),
+            "iv_cycles": self._iv_cycles.get(),
             # ET vals
             "et_set_voltage": self._et_set_voltage.get(),
             "et_read_voltage": self._et_read_voltage.get(),
@@ -982,5 +996,5 @@ def check_special_chars(string):
     return 0
 
 
-# gui = GUI()
-# gui.gui_start()
+#gui = GUI()
+#gui.gui_start()

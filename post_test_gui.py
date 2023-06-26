@@ -54,8 +54,11 @@ class ResultsGUI():
         test_select_label = Label(text="Select Test:")
         test_select_label.grid(column=0, row=0)
 
-        # Create list of devices based on the selected test
+
         def create_devices_list(*args):
+            """
+            Create list of devices based on the selected test
+            """
             selected_test = self._test_dict[self._selected_test_name.get()]
 
             self._device_dict = {}
@@ -82,6 +85,7 @@ class ResultsGUI():
         self._selected_test_name.trace_add(
             "write", callback=create_devices_list)
 
+
         def device_name_call(*args):
             if self._selected_test_name.get()[0] == "E":
                 self.create_endurance_device_stats(self._root, col=2, row=1)
@@ -96,6 +100,7 @@ class ResultsGUI():
             self._root, text="Generate Graph", command=self.create_iv_graph)
         graph_button.grid(column=1, row=2)
 
+
     def get_filename(self):
         '''
         Return the filename for the specific chosen device test
@@ -103,7 +108,7 @@ class ResultsGUI():
         test = self.get_current_test()
         folder_path = functions.create_test_folder(test)
         device = self.get_current_device()
-        filename = f'{folder_path}/{test.chiplet_name}_Col{device.x}_Row{device.y}'
+        filename = f'{folder_path}\Col{device.x}_Row{device.y}.xlsx'
         return filename
 
     def get_current_test(self):

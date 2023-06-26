@@ -3,6 +3,7 @@ Controller module for sourcemeter gui
 """
 from collections import namedtuple
 import os
+import time
 import pyvisa
 import numpy as np
 import pandas as pd
@@ -13,34 +14,20 @@ import microserial
 import post_test_gui
 
 
-# Test and features to add:
-# Forming Pulse, Endurance Test
-# Limits to each variable are as follows: When in Lin Voltage: 0-3.5V, Current:0-1A,
-# trig_count:should be very large, step: should be very small
-# delay should be very small micro or nano seconds
-# When working with Log: Voltage:Cant start at 0 and same stopping point, Current same thing,
-# Points: very large number, same with trig_count.
-# When working with custom: a list of values is needed to tell what amplitude pulse to send out.
-# Forming pulse ~3.3-3.5V for a very short time (delay should be very small).
-# Trig_count is dependent on how many pulses u want. =numofpulses*2
-# More limits: For log function trig count and points need to be the same number but for linear
-# Creating device and accepting inputs from the GUI
-
-
-class SourceMeter():
+class SourceMeter:
     """
     Class containing all code used to interact with source meter, microcontroller, and GUI
     """
 
     def __init__(self):
-        '''
+        """
         Runs when an instance of SourceMeter is created
-        '''
+        """
         # Connect to source Meter
         resource_manager = pyvisa.ResourceManager()
-        # print(resource_manager.list_resources())
         self._instrument = resource_manager.open_resource(
-            'GPIB0::24::INSTR')  # Name of sourcemeter
+            "GPIB0::24::INSTR"
+        )  # Name of sourcemeter
 
         # Call GUI
         self._gui = gui.GUI()
@@ -50,12 +37,12 @@ class SourceMeter():
         self._ran_tests = []
 
     def run_test(self):
-        '''
+        """
         Run all tests requested by the GUI
         Updates _run_tests:
             A list of namedtuples containing the test class and a list of
             device test namedtuples for each device the test was executed on
-        '''
+        """
         test_list = self._gui.get_requested_tests()
         # Check to make sure at least one test has been requested
         if len(test_list) == 0:
@@ -70,7 +57,7 @@ class SourceMeter():
             device_test_list = []
             for coords in test.selected_devices:
                 # Tell microcontroller what device we are targeting
-                microserial.message_micro(coords.x, coords.y)
+                # microserial.message_micro(coords.x, coords.y)
                 # Run the test
                 data = test.run_sourcemeter(self._instrument)
                 # Save the test data linked to the device coords
@@ -82,116 +69,87 @@ class SourceMeter():
     # The function that loops though everything
 
     def create_excel_sheets(self):
-        '''
+        """
         Create an excel sheet containing relevant statistics and all test data
         for each test
-        '''
-        folder_path = functions.create_test_folder(
-            self._gui.get_requested_tests()[0])
-        master_file = os.path.join(folder_path, 'Summary.xlsx')
+        """
+        t = time.localtime()
+        current_time = time.strftime("%H_%M_%S", t)
+
+        main_folder = functions.create_chip_folder(self._gui.get_requested_tests()[0])
+        master_file = os.path.join(main_folder, f"Summary_{current_time}.xlsx")
         for ran_test in self._ran_tests:
             test = ran_test.test
             device_test_list = ran_test.device_test_list
-            test_type = test.get_test_type()
+            folder_path = functions.create_test_folder(test)
             for device_test in device_test_list:
                 col = device_test.x
                 row = device_test.y
                 data = device_test.data
                 dataframe = create_dataframe(data)
-                filename = f'{folder_path}\\{test.chiplet_name}_{test_type}_Col{col}_Row{row}.xlsx'
+                filename = f"{folder_path}\Col{col}_Row{row}.xlsx"
                 dataframe.to_excel(filename, index=False)
             create_master_excel(master_file, ran_test, folder_path)
 
     def run_post_test_gui(self):
-        '''
+        """
         Run the post test gui after the tests have been run
-        '''
+        """
         results_gui = post_test_gui.ResultsGUI(self._gui.get_requested_tests())
         results_gui.gui_start()
 
 
 def create_dataframe(data_string):
-    '''
+    """
     Takes sourcemeter data string and converts to dataframe
     input:
         data_string: the output from the sourcemeter
     return:
         a pandas dataframe object containing the data from a sourcemeter test
-    '''
+    """
 
-    measurements = data_string.split(',')
+    measurements = data_string.split(",")
     # Reshape the measurements into a 2D array with 5 columns
     reshaped_values = np.reshape(measurements, (-1, 5))
     # Create a DataFrame with the reshaped values and column names
-    dataframe = pd.DataFrame(reshaped_values, columns=[
-        'Voltage', 'Current', 'Resistance', 'TimeStamp', 'Status'])
+    dataframe = pd.DataFrame(
+        reshaped_values,
+        columns=["Voltage", "Current", "Resistance", "TimeStamp", "Status"],
+    )
     dataframe = manipulate_df(dataframe)
     return dataframe
 
 
 def manipulate_df(dataframe):
-    '''
+    """
     cleans and converts sourcemeter dataframe to numeric values
     input:
         dataframe with non-numeric data and special characters
     return:
         clean dataframe with numeric values
-    '''
-    dataframe['Voltage'] = dataframe['Voltage'].str.strip(
-    ).str.strip("['").str.rstrip("'")
-    dataframe['Status'] = dataframe['Status'].str.rstrip("']")
-    dataframe['Voltage'] = pd.to_numeric(dataframe['Voltage'])
-    dataframe['Current'] = pd.to_numeric(dataframe['Current'])
-    dataframe['Resistance'] = pd.to_numeric(dataframe['Resistance'])
-    dataframe['TimeStamp'] = pd.to_numeric(dataframe['TimeStamp'])
-    dataframe['Status'] = pd.to_numeric(dataframe['Status'])
-
+    """
+    dataframe["Voltage"] = (
+        dataframe["Voltage"].str.strip().str.strip("['").str.rstrip("'")
+    )
+    dataframe["Status"] = dataframe["Status"].str.rstrip("']")
+    dataframe["Voltage"] = pd.to_numeric(dataframe["Voltage"])
+    dataframe["Current"] = pd.to_numeric(dataframe["Current"])
+    dataframe["Resistance"] = pd.to_numeric(dataframe["Resistance"])
+    dataframe["TimeStamp"] = pd.to_numeric(dataframe["TimeStamp"])
+    dataframe["Status"] = pd.to_numeric(dataframe["Status"])
+    dataframe["TimeStamp"] = dataframe["TimeStamp"] - dataframe["TimeStamp"][0]
     # Add new column containing true resistance data
-    dataframe["Real Resistance"] = dataframe['Voltage'] / dataframe['Current']
+    dataframe["Real Resistance"] = dataframe["Voltage"] / dataframe["Current"]
     dataframe["Real Resistance"].apply(lambda x: f"{x:.2e}")
     return dataframe
 
 
-def find_set_reset(dataframe):
-    '''
-    return:
-        set, reset voltages
-    '''
-    set_df = dataframe[dataframe['Voltage'] > 0]
-    slopes_set = np.diff(set_df["Current"])  # / np.diff(set_df["Voltage"])
-    slopes_max_index = np.argmax(slopes_set)
-
-    reset_df = dataframe[dataframe['Voltage'] < 0]
-    # / np.diff(reset_df["Voltage"])
-    slopes_reset = np.diff(reset_df["Current"])
-    slopes_min_index = np.argmax(slopes_reset)
-    set_volt = set_df.iloc[slopes_max_index, 0]
-    reset_volt = reset_df.iloc[slopes_min_index, 0]
-    print(set_volt, ' ', reset_volt)
-    return set_volt, reset_volt
-
-
 def create_master_excel(filename, ran_test, folder_path):
-    '''
-        Data to grab: TestType, Column, Row, Chip, VSet, 
-        VReset (Stats with those), HRS and LRS
-        TestParameter Length = 12
-        Name Value Length = 1
-        DataValue = 1
-        All multiplied by number of tests
-    '''
-    print(filename)
-    col_names = ['ChipName', 'Row', 'Col', 'TestType', 'Vset', 'Vreset', 'Avg. Vset',
-                 'Std_Dev_Vset', 'Med. Vset', 'Vset 1.5IQR Upper', 'Vset 1.5IQR Lower',
-                 'Avg. Vreset', 'Std_Dev_Vreset', 'Med. Vreset', 'Vreset 1.5IQR Upper',
-                 'Vreset 1.5IQR Lower', 'Avg. HRS', 'Std_Dev_HRS', 'Med. HRS', 'HRS 1.5IQR Upper',
-                 'HRS 1.5IQR Lower', 'Avg. LRS', 'Std_Dev_LRS', 'Med. LRS', 'LRS 1.5IQR Upper',
-                 'LRS 1.5IQR Lower']
-    dataframe = pd.DataFrame(columns=col_names)
-    test = ran_test.test
-    device_test_list = ran_test.device_test_list
-    chip_name = [test.chiplet_name]*len(device_test_list)
-    test_type = [test.get_test_type()]*len(device_test_list)
+    """
+    Input: Filename for Summary of data, Test information, Path of the folder the data is stored in
+    Return: Creates an excel sheet with all of the statistical information from the multiple tests.
+    """
+    # Create Variables
     col = []
     row = []
     set_v = []
@@ -224,11 +182,56 @@ def create_master_excel(filename, ran_test, folder_path):
     upper_range_reset_volt = []
     lower_range_set_volt = []
     lower_range_reset_volt = []
+    i_max = []
+    avg_i_max = []
+    std_i_max = []
+    med_i_max = []
+    percent_75_i_max = []
+    percent_25_i_max = []
+    upper_range_i_max = []
+    lower_range_i_max = []
+    # Create Columns to send Variables
+    col_names = [
+        "ChipName",
+        "Row",
+        "Col",
+        "TestType",
+        "Avg. Vset",
+        "Std_Dev_Vset",
+        "Med. Vset",
+        "Vset 1.5IQR Upper",
+        "Vset 1.5IQR Lower",
+        "Avg. Vreset",
+        "Std_Dev_Vreset",
+        "Med. Vreset",
+        "Vreset 1.5IQR Upper",
+        "Vreset 1.5IQR Lower",
+        "Avg. i_max",
+        "Std_Dev_i_max",
+        "Med. i_max",
+        "i_max 1.5IQR Upper",
+        "i_max 1.5IQR Lower",
+        "Avg. HRS",
+        "Std_Dev_HRS",
+        "Med. HRS",
+        "HRS 1.5IQR Upper",
+        "HRS 1.5IQR Lower",
+        "Avg. LRS",
+        "Std_Dev_LRS",
+        "Med. LRS",
+        "LRS 1.5IQR Upper",
+        "LRS 1.5IQR Lower",
+    ]
+    # Access the data and calculate the values
+    dataframe = pd.DataFrame(columns=col_names)
+    test = ran_test.test
+    device_test_list = ran_test.device_test_list
+    chip_name = [test.chiplet_name] * len(device_test_list)
+    test_type = [test.get_test_type()] * len(device_test_list)
     for device_test in device_test_list:
         col.append(device_test.x)
         row.append(device_test.y)
-        file_path = os.path.join(
-            folder_path, f'{test.chiplet_name}_{test.get_test_type()}_Col{col[0]}_Row{row[0]}.xlsx')
+        file_path = os.path.join(folder_path, f"Col{col[0]}_Row{row[0]}.xlsx")
         data = pd.read_excel(os.path.normpath(file_path))
         hrs = functions.find_hrs(data)
         lrs = functions.find_lrs(data)
@@ -242,37 +245,71 @@ def create_master_excel(filename, ran_test, folder_path):
         percent_75_lrs.append(np.percentile(lrs, 75))
         percent_25_hrs.append(np.percentile(hrs, 25))
         percent_25_lrs.append(np.percentile(lrs, 25))
-        upper_range_hrs.append(np.percentile(
-            hrs, 25)-1.5*(np.percentile(hrs, 75)-np.percentile(hrs, 25)))
-        lower_range_hrs.append(np.percentile(
-            hrs, 75)+1.5*(np.percentile(hrs, 75)-np.percentile(hrs, 25)))
-        upper_range_lrs.append(np.percentile(
-            lrs, 25)-1.5*(np.percentile(lrs, 75)-np.percentile(lrs, 25)))
-        lower_range_lrs.append(np.percentile(
-            lrs, 75)+1.5*(np.percentile(lrs, 75)-np.percentile(lrs, 25)))
+        upper_range_hrs.append(
+            np.percentile(hrs, 25)
+            - 1.5 * (np.percentile(hrs, 75) - np.percentile(hrs, 25))
+        )
+        lower_range_hrs.append(
+            np.percentile(hrs, 75)
+            + 1.5 * (np.percentile(hrs, 75) - np.percentile(hrs, 25))
+        )
+        upper_range_lrs.append(
+            np.percentile(lrs, 25)
+            - 1.5 * (np.percentile(lrs, 75) - np.percentile(lrs, 25))
+        )
+        lower_range_lrs.append(
+            np.percentile(lrs, 75)
+            + 1.5 * (np.percentile(lrs, 75) - np.percentile(lrs, 25))
+        )
+        # Check if IV or Endurance
         if isinstance(test, tests.IVTest):
-            set_volt, reset_volt = find_set_reset(data)
-            set_v.append(set_volt)
-            reset_v.append(reset_volt)
-            avg_set_volt.append(np.mean(set_volt))
-            avg_reset_volt.append(np.mean(reset_volt))
-            std_set_volt.append(np.std(set_volt))
-            std_reset_volt.append(np.std(reset_volt))
-            med_set_volt.append(np.median(set_volt))
-            med_reset_volt.append(np.median(reset_volt))
-            percent_75_set_volt.append(np.percentile(set_volt, 75))
-            percent_75_reset_volt.append(np.percentile(reset_volt, 75))
-            percent_25_set_volt.append(np.percentile(set_volt, 25))
-            percent_25_reset_volt.append(np.percentile(reset_volt, 25))
-            upper_range_set_volt.append(np.percentile(
-                set_volt, 25)-1.5*(np.percentile(set_volt, 75)-np.percentile(set_volt, 25)))
-            lower_range_set_volt.append(np.percentile(
-                set_volt, 75)+1.5*(np.percentile(set_volt, 75)-np.percentile(set_volt, 25)))
-            upper_range_reset_volt.append(np.percentile(
-                reset_volt, 25)-1.5*(np.percentile(reset_volt, 75)-np.percentile(reset_volt, 25)))
-            lower_range_reset_volt.append(np.percentile(
-                reset_volt, 75)+1.5*(np.percentile(reset_volt, 75)-np.percentile(reset_volt, 25)))
+            split_data = split_dataframe(data)
+            for data in split_data:
+                i_max.append(get_i_max(data))
+                set_volt, reset_volt = find_set_reset(data)
+                set_v.append(set_volt)
+                reset_v.append(reset_volt)
+            avg_set_volt.append(np.mean(set_v))
+            avg_reset_volt.append(np.mean(reset_v))
+            std_set_volt.append(np.std(set_v))
+            std_reset_volt.append(np.std(reset_v))
+            med_set_volt.append(np.median(set_v))
+            med_reset_volt.append(np.median(reset_v))
+            percent_75_set_volt.append(np.percentile(set_v, 75))
+            percent_75_reset_volt.append(np.percentile(reset_v, 75))
+            percent_25_set_volt.append(np.percentile(set_v, 25))
+            percent_25_reset_volt.append(np.percentile(reset_v, 25))
+            upper_range_set_volt.append(
+                np.percentile(set_v, 25)
+                - 1.5 * (np.percentile(set_v, 75) - np.percentile(set_v, 25))
+            )
+            lower_range_set_volt.append(
+                np.percentile(set_v, 75)
+                + 1.5 * (np.percentile(set_v, 75) - np.percentile(set_v, 25))
+            )
+            upper_range_reset_volt.append(
+                np.percentile(reset_v, 25)
+                - 1.5 * (np.percentile(reset_v, 75) - np.percentile(reset_v, 25))
+            )
+            lower_range_reset_volt.append(
+                np.percentile(reset_v, 75)
+                + 1.5 * (np.percentile(reset_v, 75) - np.percentile(reset_v, 25))
+            )
+            avg_i_max.append(np.mean(i_max))
+            std_i_max.append(np.std(i_max))
+            med_i_max.append(np.median(i_max))
+            percent_75_i_max.append(np.percentile(i_max, 75))
+            percent_25_i_max.append(np.percentile(i_max, 25))
+            upper_range_i_max.append(
+                np.percentile(i_max, 25)
+                - 1.5 * (np.percentile(i_max, 75) - np.percentile(i_max, 25))
+            )
+            lower_range_i_max.append(
+                np.percentile(i_max, 75)
+                + 1.5 * (np.percentile(i_max, 75) - np.percentile(i_max, 25))
+            )
         elif isinstance(test, tests.EnduranceTest):
+            # Cannot calculate these in Endruance Test but they need to have equal lengths so fill them with None
             set_v.append(None)
             reset_v.append(None)
             avg_set_volt.append(None)
@@ -289,45 +326,107 @@ def create_master_excel(filename, ran_test, folder_path):
             lower_range_set_volt.append(None)
             upper_range_reset_volt.append(None)
             lower_range_reset_volt.append(None)
-    dataframe['ChipName'] = chip_name
-    dataframe['Row'] = row
-    dataframe['Col'] = col
-    dataframe['TestType'] = test_type
-    dataframe['Vset'] = set_v
-    dataframe['Vreset'] = reset_v
-    dataframe['Avg. HRS'] = avg_hrs
-    dataframe['Avg. LRS'] = avg_lrs
-    dataframe['Std_Dev_HRS'] = std_hrs
-    dataframe['Std_Dev_LRS'] = std_lrs
-    dataframe['Med. HRS'] = med_hrs
-    dataframe['Med. LRS'] = med_lrs
-    dataframe['HRS 1.5IQR Upper'] = upper_range_hrs
-    dataframe['LRS 1.5IQR Upper'] = upper_range_lrs
-    dataframe['HRS 1.5IQR Lower'] = lower_range_hrs
-    dataframe['LRS 1.5IQR Lower'] = lower_range_lrs
-    dataframe['Avg. Vset'] = avg_set_volt
-    dataframe['Avg. Vreset'] = avg_reset_volt
-    dataframe['Std_Dev_Vset'] = std_set_volt
-    dataframe['Std_Dev_Vreset'] = std_reset_volt
-    dataframe['Med. Vset'] = med_set_volt
-    dataframe['Med. Vreset'] = med_reset_volt
-    dataframe['Vset 1.5IQR Upper'] = upper_range_set_volt
-    dataframe['Vreset 1.5IQR Upper'] = upper_range_reset_volt
-    dataframe['Vset 1.5IQR Lower'] = lower_range_set_volt
-    dataframe['Vreset 1.5IQR Lower'] = lower_range_reset_volt
+            i_max.append(None)
+            avg_i_max.append(None)
+            std_i_max.append(None)
+            med_i_max.append(None)
+            percent_75_i_max.append(None)
+            percent_25_i_max.append(None)
+            upper_range_i_max.append(None)
+            lower_range_i_max.append(None)
+
+    # Send to Dataframe
+    dataframe["ChipName"] = chip_name
+    dataframe["Row"] = row
+    dataframe["Col"] = col
+    dataframe["TestType"] = test_type
+    dataframe["Avg. HRS"] = avg_hrs
+    dataframe["Avg. LRS"] = avg_lrs
+    dataframe["Std_Dev_HRS"] = std_hrs
+    dataframe["Std_Dev_LRS"] = std_lrs
+    dataframe["Med. HRS"] = med_hrs
+    dataframe["Med. LRS"] = med_lrs
+    dataframe["HRS 1.5IQR Upper"] = upper_range_hrs
+    dataframe["LRS 1.5IQR Upper"] = upper_range_lrs
+    dataframe["HRS 1.5IQR Lower"] = lower_range_hrs
+    dataframe["LRS 1.5IQR Lower"] = lower_range_lrs
+    dataframe["Avg. Vset"] = avg_set_volt
+    dataframe["Avg. Vreset"] = avg_reset_volt
+    dataframe["Std_Dev_Vset"] = std_set_volt
+    dataframe["Std_Dev_Vreset"] = std_reset_volt
+    dataframe["Med. Vset"] = med_set_volt
+    dataframe["Med. Vreset"] = med_reset_volt
+    dataframe["Vset 1.5IQR Upper"] = upper_range_set_volt
+    dataframe["Vreset 1.5IQR Upper"] = upper_range_reset_volt
+    dataframe["Vset 1.5IQR Lower"] = lower_range_set_volt
+    dataframe["Vreset 1.5IQR Lower"] = lower_range_reset_volt
+    dataframe["Avg. i_max"] = avg_i_max
+    dataframe["Std_Dev_i_max"] = std_i_max
+    dataframe["Med. i_max"] = med_i_max
+    dataframe["i_max 1.5IQR Upper"] = upper_range_i_max
+    dataframe["i_max 1.5IQR Lower"] = lower_range_i_max
+    # Create File or Add to It
     if os.path.exists(filename):
         dataframe = pd.concat([pd.read_excel(filename), dataframe])
         dataframe.to_excel(filename, index=False)
-        print(dataframe)
     else:
         dataframe.to_excel(filename, index=False)
 
 
+def find_set_reset(dataframe):
+    """
+    return:
+        set, reset voltages in a list that is used to create a statiscal analysis
+    """
+    set_df = dataframe[dataframe["Voltage"] > 0]
+    slopes_set = np.diff(set_df["Current"])
+    slopes_max_index = np.argmax(slopes_set)
+
+    reset_df = dataframe[dataframe["Voltage"] < 0]
+    slopes_reset = np.diff(reset_df["Current"])
+    slopes_min_index = np.argmax(slopes_reset)
+    set_volt = set_df.iloc[slopes_max_index, 0]
+    reset_volt = reset_df.iloc[slopes_min_index, 0]
+    return set_volt, reset_volt
+
+
+def get_i_max(data):
+    """
+    Grabs the largest Current in the dataframe
+    """
+    i_max = max(data["Current"])
+    return i_max
+
+
+def split_dataframe(dataframe):
+    """
+    Takes the large dataframe from multiple IV's and breaks it up into smalled dataframes that can be analyzed
+    Return: BrokenUp dataframe
+    """
+    split_dataframes = []
+    start_index = 0
+    prev_voltage = None
+
+    for index, row in dataframe.iterrows():
+        voltage = row["Voltage"]
+
+        if voltage == 0 and prev_voltage == 0:
+            split_dataframes.append(dataframe.iloc[start_index:index])
+            start_index = index
+
+        prev_voltage = voltage
+
+    # Append the last section of the DataFrame (If only one loop then just send the dataframe)
+    split_dataframes.append(dataframe.iloc[start_index:])
+
+    return split_dataframes
+
+
 def calc_iqr(data):
-    '''
+    """
     Find the interquartile range of a dataset
-    '''
-    iqr = np.percentile(data, 75)-np.percentile(data, 25)
+    """
+    iqr = np.percentile(data, 75) - np.percentile(data, 25)
     return iqr
 
 
