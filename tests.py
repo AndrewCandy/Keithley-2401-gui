@@ -20,35 +20,35 @@ class Test(ABC):
     """
 
     def __init__(self, grid, test_num, chiplet_name):
-        '''
+        """
         Initializes the Test class
-        '''
+        """
         self.selected_devices = grid_to_list(grid)
         self.start_time = dt.now()
         self.chiplet_name = chiplet_name
         self.test_num = test_num
 
     def set_start_time(self):
-        '''
+        """
         Sets the test start time to the current time
-        To be called 
+        To be called
         return: none
-        '''
+        """
         self.start_time = dt.now()
 
     @abstractmethod
     def run_sourcemeter(self, instrument):
-        '''
+        """
         Sends appropriate commands to the sourcemeter for the given test
         return:
             String of data from sourcemeter
-        '''
+        """
 
     @abstractmethod
     def get_test_type(self):
-        '''
+        """
         returns a string describing the type of test being run
-        '''
+        """
 
 
 class IVTest(Test):
@@ -68,58 +68,80 @@ class IVTest(Test):
         _is_up_down:
     """
 
-    def __init__(self, grid, test_num, chiplet_name, voltage_range, mode, space,
-                 source_voltage, source_delay, source_voltage_start,
-                 source_voltage_stop, num_steps, current_compliance, is_up_down, cycles
-                 ):
-        '''
+    def __init__(
+        self,
+        grid,
+        test_num,
+        chiplet_name,
+        space,
+        source_voltage,
+        source_delay,
+        source_voltage_start,
+        source_voltage_stop,
+        source_voltage_neg,
+        num_steps,
+        neg_steps,
+        current_compliance,
+        cycles,
+        accuracy
+    ):
+        """
         Initailizes the the IV_Test class and parent Test class
-        '''
+        """
         super().__init__(grid, test_num, chiplet_name)
-        self._range = voltage_range
-        self._mode = mode
         self._space = space
         self._source_voltage = source_voltage
         self._source_delay = source_delay
         self._source_voltage_start = source_voltage_start
         self._source_voltage_stop = source_voltage_stop
+        self._source_voltage_neg = source_voltage_neg
         self._num_steps = num_steps
+        self._neg_steps = neg_steps
         self._trigger_count = num_steps
+        self._trigger_count_neg = neg_steps
         self._current_compliance = current_compliance
-        self._is_up_down = is_up_down
         self._cycles = cycles
+        self._accuracy = accuracy 
 
     def get_voltage_space(self):
-        '''
+        """
         returns LIN or LOG based on what type of test is selected
-        '''
+        """
         return self._space
 
     def run_sourcemeter(self, instrument):
-        '''
+        """
         Determine what version of IV test to run and call respective function from functions.py
         return:
             A string of vlaues from the test
-        '''
-        measurements = ''
-        if self._space == 'LIN':
+        """
+        measurements = ""
+        if self._space == "LIN":
             voltage_step = calc_voltage_step(
-                self._source_voltage_start,
-                self._source_voltage_stop,
-                self._num_steps
+                self._source_voltage_start, self._source_voltage_stop, self._num_steps
+            )
+            neg_voltage_step = calc_voltage_step(
+                self._source_voltage_start, self._source_voltage_neg, self._neg_steps
             )
             for _ in range(0, self._cycles):
-                measurements += functions.staircase_lin(
-                    instrument=instrument,
-                    current_compliance=self._current_compliance,
-                    source_voltage=self._source_voltage,
-                    source_delay=self._source_delay,
-                    source_voltage_start=self._source_voltage_start,
-                    source_voltage_stop=self._source_voltage_stop,
-                    source_voltage_step=voltage_step,
-                    trig_count=self._trigger_count
-                    ) + ','
-        elif self._space == 'LOG':
+                measurements += (
+                    functions.staircase_lin(
+                        instrument=instrument,
+                        current_compliance=self._current_compliance,
+                        source_voltage=self._source_voltage,
+                        source_delay=self._source_delay,
+                        source_voltage_start=self._source_voltage_start,
+                        source_voltage_stop=self._source_voltage_stop,
+                        source_voltage_step=voltage_step,
+                        source_voltage_neg =self._source_voltage_neg,
+                        neg_step=neg_voltage_step,
+                        trig_count=self._trigger_count,
+                        trig_count_neg = self._trigger_count_neg,
+                        accuracy = self._accuracy
+                    )
+                    + ","
+                )
+        elif self._space == "LOG":
             measurements += functions.staircase_log(
                 instrument=instrument,
                 is_up_down=self._is_up_down,
@@ -129,18 +151,18 @@ class IVTest(Test):
                 source_voltage_start=self._source_voltage_start,
                 source_voltage_stop=self._source_voltage_stop,
                 log_num_steps=self._num_steps,
-                trig_count=self._trigger_count
+                trig_count=self._trigger_count,
             )
-        return measurements.rstrip(',')
+        return measurements.rstrip(",")
 
     def get_test_type(self):
-        '''
+        """
         returns a string describing the type of test being run
-        '''
+        """
         test_type = ""
-        if self._space == 'LIN':
+        if self._space == "LIN":
             test_type += "Linear_"
-        elif self._space == 'LOG':
+        elif self._space == "LOG":
             test_type += "Logarithmic_"
         # Show it was an IV
         test_type += f"IV_{self.test_num}"
@@ -161,13 +183,22 @@ class EnduranceTest(Test):
         _source_delay:
     """
 
-    def __init__(self, grid, test_num, chiplet_name, source_voltage, source_delay,
-                 current_compliance, cycles, set_voltage, read_voltage,
-                 reset_voltage
-                 ):
-        '''
+    def __init__(
+        self,
+        grid,
+        test_num,
+        chiplet_name,
+        source_voltage,
+        source_delay,
+        current_compliance,
+        cycles,
+        set_voltage,
+        read_voltage,
+        reset_voltage,
+    ):
+        """
         Initailizes the the EnduranceTest class and parent Test class
-        '''
+        """
         super().__init__(grid, test_num, chiplet_name)
         self._set_voltage = set_voltage
         self._read_voltage = read_voltage
@@ -178,54 +209,57 @@ class EnduranceTest(Test):
         self._source_delay = source_delay
 
     def run_sourcemeter(self, instrument):
-        '''
+        """
         Call respective test function from functions.py
-        '''
-        measurements = ''
+        """
+        measurements = ""
         voltage_list = functions.create_voltage_list(
             set_voltage=self._set_voltage,
             read_voltage=self._read_voltage,
-            reset_voltage=self._reset_voltage
+            reset_voltage=self._reset_voltage,
         )
         for _ in range(0, self._cycles, 5):
-            measurements += functions.endurance_test(
-                instrument=instrument,
-                current_compliance=self._current_compliance,
-                source_voltage=self._source_voltage,
-                source_delay=self._source_delay,
-                voltage_list=voltage_list,
-                list_length=40
-            ) + ','
-        return measurements.rstrip(',')
+            measurements += (
+                functions.endurance_test(
+                    instrument=instrument,
+                    current_compliance=self._current_compliance,
+                    source_voltage=self._source_voltage,
+                    source_delay=self._source_delay,
+                    voltage_list=voltage_list,
+                    list_length=40,
+                )
+                + ","
+            )
+        return measurements.rstrip(",")
 
     def get_test_type(self):
-        '''
+        """
         returns a string describing the type of test being run
-        '''
+        """
         return f"Endurance_{self.test_num}"
 
 
 def calc_voltage_step(voltage_start, voltage_stop, num_steps):
-    '''
+    """
     Return:
         The step size for the requested number of steps to occur
         between start and stop voltages
-    '''
+    """
     voltage_step = (voltage_stop - voltage_start) / num_steps
     return voltage_step
 
 
 def grid_to_list(grid):
-    '''
+    """
     Take square device grid and convert it to a list of (x,y) namedtuples
     return:
         A list of named tuples containing xy coords
-    '''
+    """
     Point = namedtuple("Point", "x y")
     tuple_list = []
     for col, column in enumerate(grid):
         for row, cell in enumerate(column):
             if cell == 1:
-                point = Point(col, row)
+                point = Point(col+1, row+1)
                 tuple_list.append(point)
     return tuple_list

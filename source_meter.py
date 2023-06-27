@@ -25,6 +25,7 @@ class SourceMeter:
         """
         # Connect to source Meter
         resource_manager = pyvisa.ResourceManager()
+        print(resource_manager.list_resources())
         self._instrument = resource_manager.open_resource(
             "GPIB0::24::INSTR"
         )  # Name of sourcemeter
@@ -57,7 +58,7 @@ class SourceMeter:
             device_test_list = []
             for coords in test.selected_devices:
                 # Tell microcontroller what device we are targeting
-                # microserial.message_micro(coords.x, coords.y)
+                #microserial.message_micro(coords.x, coords.y)
                 # Run the test
                 data = test.run_sourcemeter(self._instrument)
                 # Save the test data linked to the device coords
@@ -75,7 +76,6 @@ class SourceMeter:
         """
         t = time.localtime()
         current_time = time.strftime("%H_%M_%S", t)
-
         main_folder = functions.create_chip_folder(self._gui.get_requested_tests()[0])
         master_file = os.path.join(main_folder, f"Summary_{current_time}.xlsx")
         for ran_test in self._ran_tests:
@@ -154,6 +154,8 @@ def create_master_excel(filename, ran_test, folder_path):
     row = []
     set_v = []
     reset_v = []
+    hrs = []
+    lrs = []
     avg_lrs = []
     avg_hrs = []
     std_hrs = []
@@ -182,14 +184,22 @@ def create_master_excel(filename, ran_test, folder_path):
     upper_range_reset_volt = []
     lower_range_set_volt = []
     lower_range_reset_volt = []
-    i_max = []
-    avg_i_max = []
-    std_i_max = []
-    med_i_max = []
-    percent_75_i_max = []
-    percent_25_i_max = []
-    upper_range_i_max = []
-    lower_range_i_max = []
+    i_max_pos = []
+    i_max_neg = []
+    avg_i_max_set = []
+    std_i_max_set = []
+    med_i_max_set = []
+    percent_75_i_max_set = []
+    percent_25_i_max_set = []
+    upper_range_i_max_set = []
+    lower_range_i_max_set = []
+    avg_i_max_reset = []
+    std_i_max_reset = []
+    med_i_max_reset = []
+    percent_75_i_max_reset = []
+    percent_25_i_max_reset = []
+    upper_range_i_max_reset = []
+    lower_range_i_max_reset = []
     # Create Columns to send Variables
     col_names = [
         "ChipName",
@@ -197,26 +207,31 @@ def create_master_excel(filename, ran_test, folder_path):
         "Col",
         "TestType",
         "Avg. Vset",
+        "Avg. Vreset",
+        "Avg. i_max_set",
+        "Avg. i_max_reset",
+        "Avg. HRS",
+        "Avg. LRS",
         "Std_Dev_Vset",
         "Med. Vset",
         "Vset 1.5IQR Upper",
         "Vset 1.5IQR Lower",
-        "Avg. Vreset",
         "Std_Dev_Vreset",
         "Med. Vreset",
         "Vreset 1.5IQR Upper",
         "Vreset 1.5IQR Lower",
-        "Avg. i_max",
-        "Std_Dev_i_max",
-        "Med. i_max",
-        "i_max 1.5IQR Upper",
-        "i_max 1.5IQR Lower",
-        "Avg. HRS",
+        "Std_Dev_i_max_set",
+        "Med. i_max_set",
+        "i_max_set 1.5IQR Upper",
+        "i_max_set 1.5IQR Lower",
+        "Std_Dev_i_max_reset",
+        "Med. i_max_reset",
+        "i_max_reset 1.5IQR Upper",
+        "i_max_reset 1.5IQR Lower",
         "Std_Dev_HRS",
         "Med. HRS",
         "HRS 1.5IQR Upper",
         "HRS 1.5IQR Lower",
-        "Avg. LRS",
         "Std_Dev_LRS",
         "Med. LRS",
         "LRS 1.5IQR Upper",
@@ -229,12 +244,22 @@ def create_master_excel(filename, ran_test, folder_path):
     chip_name = [test.chiplet_name] * len(device_test_list)
     test_type = [test.get_test_type()] * len(device_test_list)
     for device_test in device_test_list:
-        col.append(device_test.x)
-        row.append(device_test.y)
-        file_path = os.path.join(folder_path, f"Col{col[0]}_Row{row[0]}.xlsx")
+        set_v = []
+        reset_v = []
+        i_max_pos = []
+        i_max_neg = []
+        hrs = []
+        lrs = []
+        x = (device_test.x)
+        y = (device_test.y)
+        col.append(x)
+        row.append(y)
+        file_path = os.path.join(folder_path, f"Col{x}_Row{y}.xlsx")
         data = pd.read_excel(os.path.normpath(file_path))
-        hrs = functions.find_hrs(data)
-        lrs = functions.find_lrs(data)
+        split_data = split_dataframe(data)
+        for data in split_data:
+            hrs.append(functions.find_hrs(data))
+            lrs.append(functions.find_lrs(data))
         avg_hrs.append(np.mean(hrs))
         avg_lrs.append(np.mean(lrs))
         std_hrs.append(np.std(hrs))
@@ -265,7 +290,9 @@ def create_master_excel(filename, ran_test, folder_path):
         if isinstance(test, tests.IVTest):
             split_data = split_dataframe(data)
             for data in split_data:
-                i_max.append(get_i_max(data))
+                i_max_set, i_max_reset = (get_i_max(data))
+                i_max_pos.append(i_max_set)
+                i_max_neg.append(i_max_reset)
                 set_volt, reset_volt = find_set_reset(data)
                 set_v.append(set_volt)
                 reset_v.append(reset_volt)
@@ -295,18 +322,31 @@ def create_master_excel(filename, ran_test, folder_path):
                 np.percentile(reset_v, 75)
                 + 1.5 * (np.percentile(reset_v, 75) - np.percentile(reset_v, 25))
             )
-            avg_i_max.append(np.mean(i_max))
-            std_i_max.append(np.std(i_max))
-            med_i_max.append(np.median(i_max))
-            percent_75_i_max.append(np.percentile(i_max, 75))
-            percent_25_i_max.append(np.percentile(i_max, 25))
-            upper_range_i_max.append(
-                np.percentile(i_max, 25)
-                - 1.5 * (np.percentile(i_max, 75) - np.percentile(i_max, 25))
+            avg_i_max_set.append(np.mean(i_max_pos))
+            std_i_max_set.append(np.std(i_max_pos))
+            med_i_max_set.append(np.median(i_max_pos))
+            percent_75_i_max_set.append(np.percentile(i_max_pos, 75))
+            percent_25_i_max_set.append(np.percentile(i_max_pos, 25))
+            upper_range_i_max_set.append(
+                np.percentile(i_max_pos, 25)
+                - 1.5 * (np.percentile(i_max_pos, 75) - np.percentile(i_max_pos, 25))
             )
-            lower_range_i_max.append(
-                np.percentile(i_max, 75)
-                + 1.5 * (np.percentile(i_max, 75) - np.percentile(i_max, 25))
+            lower_range_i_max_set.append(
+                np.percentile(i_max_pos, 75)
+                + 1.5 * (np.percentile(i_max_pos, 75) - np.percentile(i_max_pos, 25))
+            )
+            avg_i_max_reset.append(np.mean(i_max_neg))
+            std_i_max_reset.append(np.std(i_max_neg))
+            med_i_max_reset.append(np.median(i_max_neg))
+            percent_75_i_max_reset.append(np.percentile(i_max_neg, 75))
+            percent_25_i_max_reset.append(np.percentile(i_max_neg, 25))
+            upper_range_i_max_reset.append(
+                np.percentile(i_max_neg, 25)
+                - 1.5 * (np.percentile(i_max_neg, 75) - np.percentile(i_max_neg, 25))
+            )
+            lower_range_i_max_reset.append(
+                np.percentile(i_max_neg, 75)
+                + 1.5 * (np.percentile(i_max_neg, 75) - np.percentile(i_max_neg, 25))
             )
         elif isinstance(test, tests.EnduranceTest):
             # Cannot calculate these in Endruance Test but they need to have equal lengths so fill them with None
@@ -326,14 +366,20 @@ def create_master_excel(filename, ran_test, folder_path):
             lower_range_set_volt.append(None)
             upper_range_reset_volt.append(None)
             lower_range_reset_volt.append(None)
-            i_max.append(None)
-            avg_i_max.append(None)
-            std_i_max.append(None)
-            med_i_max.append(None)
-            percent_75_i_max.append(None)
-            percent_25_i_max.append(None)
-            upper_range_i_max.append(None)
-            lower_range_i_max.append(None)
+            avg_i_max_set.append(None)
+            std_i_max_set.append(None)
+            med_i_max_set.append(None)
+            percent_75_i_max_set.append(None)
+            percent_25_i_max_set.append(None)
+            upper_range_i_max_set.append(None)
+            lower_range_i_max_set.append(None)
+            avg_i_max_reset.append(None)
+            std_i_max_reset.append(None)
+            med_i_max_reset.append(None)
+            percent_75_i_max_reset.append(None)
+            percent_25_i_max_reset.append(None)
+            upper_range_i_max_reset.append(None)
+            lower_range_i_max_reset.append(None)
 
     # Send to Dataframe
     dataframe["ChipName"] = chip_name
@@ -360,11 +406,17 @@ def create_master_excel(filename, ran_test, folder_path):
     dataframe["Vreset 1.5IQR Upper"] = upper_range_reset_volt
     dataframe["Vset 1.5IQR Lower"] = lower_range_set_volt
     dataframe["Vreset 1.5IQR Lower"] = lower_range_reset_volt
-    dataframe["Avg. i_max"] = avg_i_max
-    dataframe["Std_Dev_i_max"] = std_i_max
-    dataframe["Med. i_max"] = med_i_max
-    dataframe["i_max 1.5IQR Upper"] = upper_range_i_max
-    dataframe["i_max 1.5IQR Lower"] = lower_range_i_max
+    dataframe["Avg. i_max_set"] = avg_i_max_set
+    dataframe["Std_Dev_i_max_set"] = std_i_max_set
+    dataframe["Med. i_max_set"] = med_i_max_set
+    dataframe["i_max_set 1.5IQR Upper"] = upper_range_i_max_set
+    dataframe["i_max_set 1.5IQR Lower"] = lower_range_i_max_set
+    dataframe["Avg. i_max_reset"] = avg_i_max_reset
+    dataframe["Std_Dev_i_max_reset"] = std_i_max_reset
+    dataframe["Med. i_max_reset"] = med_i_max_reset
+    dataframe["i_max_reset 1.5IQR Upper"] = upper_range_i_max_reset
+    dataframe["i_max_reset 1.5IQR Lower"] = lower_range_i_max_reset
+    
     # Create File or Add to It
     if os.path.exists(filename):
         dataframe = pd.concat([pd.read_excel(filename), dataframe])
@@ -390,12 +442,15 @@ def find_set_reset(dataframe):
     return set_volt, reset_volt
 
 
-def get_i_max(data):
+def get_i_max(dataframe):
     """
     Grabs the largest Current in the dataframe
     """
-    i_max = max(data["Current"])
-    return i_max
+    set_df = dataframe[dataframe["Voltage"] > 0]
+    i_max_set = max(set_df["Current"])
+    reset_df = dataframe[dataframe["Voltage"] < 0]
+    i_max_reset = max(reset_df["Current"])
+    return i_max_set, i_max_reset
 
 
 def split_dataframe(dataframe):
