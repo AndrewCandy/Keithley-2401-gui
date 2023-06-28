@@ -101,7 +101,7 @@ class IVTest(Test):
         self._trigger_count_neg = neg_steps
         self._current_compliance = current_compliance
         self._cycles = cycles
-        self._accuracy = accuracy 
+        self._accuracy = accuracy
 
     def get_voltage_space(self):
         """
@@ -144,7 +144,6 @@ class IVTest(Test):
         elif self._space == "LOG":
             measurements += functions.staircase_log(
                 instrument=instrument,
-                is_up_down=self._is_up_down,
                 current_compliance=self._current_compliance,
                 source_voltage=self._source_voltage,
                 source_delay=self._source_delay,

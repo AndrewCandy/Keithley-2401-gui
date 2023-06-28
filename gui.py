@@ -48,6 +48,8 @@ class GUI:
         self._et_source_delay = DoubleVar(self._root)
         self._chiplet_name = StringVar(self._root)
 
+        self._var = IntVar(self._root)
+
         # create a grid for storing the positions of selected devices
         self._grid_size = 8
         self._devices_grid = []
@@ -91,8 +93,8 @@ class GUI:
         cycles = self._iv_cycles
         spacename = self._iv_space
         source_delay_minmax = [0.0, 0.25]
-        self.source_voltage_minmax = [0.0, 3.5]
-        self.source_voltage_neg_minmax = [-2.5, 0]
+        source_voltage_minmax = [0.0, 3.5]
+        source_voltage_neg_minmax = [-2.5, 0]
         current_minmax = [0.0, 0.01]
         num_steps_minmax = [1, 100]
 
@@ -127,7 +129,7 @@ class GUI:
                 accuracy.set(saved_vals["iv_accuracy"])
                 spacename.set(saved_vals["iv_space"])
                 cycles.set(saved_vals("iv_cycles"))
-            except:
+            except Exception as _:
                 print("Previous values not available.1")
 
         get_start_values()
@@ -140,8 +142,8 @@ class GUI:
         src_voltage_label = Label(frame, text="Source Voltage:")
         src_voltage_scale = Spinbox(
             frame,
-            from_=self.source_voltage_minmax[0],
-            to=self.source_voltage_minmax[1],
+            from_=source_voltage_minmax[0],
+            to=source_voltage_minmax[1],
             textvariable=source_voltage,
             increment=0.1,
             wrap=True
@@ -160,19 +162,19 @@ class GUI:
         src_voltage_start_scale = Spinbox(
             frame,
             textvariable=source_voltage_start,
-            from_=self.source_voltage_minmax[0],
-            to=self.source_voltage_minmax[1],
+            from_=source_voltage_minmax[0],
+            to=source_voltage_minmax[1],
             increment=0.1,
             wrap=True
         )
 
-        
+
         src_voltage_stop_label = Label(frame, text="Source Voltage Stop:")
         src_voltage_stop_scale = ttk.Spinbox(
             frame,
             textvariable=source_voltage_stop,
-            from_=self.source_voltage_minmax[0],
-            to=self.source_voltage_minmax[1],
+            from_=source_voltage_minmax[0],
+            to=source_voltage_minmax[1],
             increment=0.1,
             wrap=True,
             style="TSpinbox"
@@ -182,8 +184,8 @@ class GUI:
         src_voltage_neg_scale = ttk.Spinbox(
             frame,
             textvariable=source_voltage_neg,
-            from_=self.source_voltage_neg_minmax[0],
-            to=self.source_voltage_neg_minmax[1],
+            from_=source_voltage_neg_minmax[0],
+            to=source_voltage_neg_minmax[1],
             increment=0.1,
             wrap=True,
             style="TSpinbox"
@@ -239,18 +241,18 @@ class GUI:
             increment=1,
             wrap=True
         )
-        self.var=IntVar()
+        self._var.set(0)
         button = Button(
             frame,
             text="Add Test",
-            command=lambda: self.var.set(1),
+            command=lambda: self._var.set(1),
             width=25,
             height=3,
             background="red",
             activebackground="tomato",
         )
-       
-        
+
+
         # Place items in frame
         def grid_assign():
             iv_test_label.grid(column=0, columnspan=5, row=0)
@@ -297,22 +299,22 @@ class GUI:
         def check_stop_voltage(*args):
             try:
                 value = source_voltage_stop.get()
-                if value > self.source_voltage_minmax[1]:
+                if value > source_voltage_minmax[1]:
                     src_voltage_stop_scale["style"] = "Red.TSpinbox"
                 else:
                     src_voltage_stop_scale["style"] = "TSpinbox"
-            except:
+            except Exception as _:
                 pass
         def check_neg_voltage(*args):
             try:
                 value = source_voltage_neg.get()
-                if value < self.source_voltage_neg_minmax[0]:
+                if value < source_voltage_neg_minmax[0]:
                     src_voltage_neg_scale["style"] = "Red.TSpinbox"
-                elif value> self.source_voltage_neg_minmax[1]:
+                elif value> source_voltage_neg_minmax[1]:
                     src_voltage_neg_scale["style"] = "Red.TSpinbox"
                 else:
                     src_voltage_neg_scale["style"] = "TSpinbox"
-            except:
+            except Exception as _:
                 pass
         # Presets
         def store_preset():
@@ -415,7 +417,7 @@ class GUI:
         source_voltage = self._et_source_voltage
         source_delay = self._et_source_delay
         source_delay_minmax = [0.0, 0.25]
-        self.source_voltage_minmax = [-1.5, 3.5]
+        source_voltage_minmax = [-1.5, 3.5]
         set_voltage_minmax = [0,5]
         reset_voltage_minmax = [-5,0]
         read_voltage_minmax = [-0.3,0.3]
@@ -438,7 +440,7 @@ class GUI:
                 current_compliance.set(saved_vals["et_current_compliance"])
                 source_voltage.set(saved_vals["et_source_voltage"])
                 source_delay.set(saved_vals["et_source_delay"])
-            except:
+            except Exception as _:
                 print("Previous values not available.")
 
         get_start_values()
@@ -450,7 +452,7 @@ class GUI:
                     set_voltage_scale["style"] = "Red.TSpinbox"
                 else:
                     set_voltage_scale["style"] = "TSpinbox"
-            except:
+            except Exception as _:
                 pass
         def check_reset_voltage(*args):
             try:
@@ -461,7 +463,7 @@ class GUI:
                     reset_voltage_scale["style"] = "Red.TSpinbox"
                 else:
                     reset_voltage_scale["style"] = "TSpinbox"
-            except:
+            except Exception as _:
                 pass
         def check_read_voltage(*args):
             try:
@@ -472,7 +474,7 @@ class GUI:
                     read_voltage_scale["style"] = "Red.TSpinbox"
                 else:
                     read_voltage_scale["style"] = "TSpinbox"
-            except:
+            except Exception as _:
                 pass
 
 
@@ -491,8 +493,8 @@ class GUI:
         set_voltage_scale = ttk.Spinbox(
             frame,
             textvariable=set_voltage,
-            from_=self.source_voltage_minmax[0],
-            to=self.source_voltage_minmax[1],
+            from_=source_voltage_minmax[0],
+            to=source_voltage_minmax[1],
             increment=0.1,
             wrap=True,
             style="TSpinbox"
@@ -505,8 +507,8 @@ class GUI:
         reset_voltage_scale = ttk.Spinbox(
             frame,
             textvariable=reset_voltage,
-            from_=self.source_voltage_minmax[0],
-            to=self.source_voltage_minmax[1],
+            from_=source_voltage_minmax[0],
+            to=source_voltage_minmax[1],
             increment=0.1,
             wrap=True,
             style="TSpinbox"
@@ -514,13 +516,13 @@ class GUI:
         reset_voltage_label.grid(column=0, row=4)
         reset_voltage_scale.grid(column=0, row=5)
         reset_voltage.trace_add("write",callback=lambda *args: check_reset_voltage())
-        
+
         read_voltage_label = Label(frame, text="Read Voltage:")
         read_voltage_scale = ttk.Spinbox(
             frame,
             textvariable=read_voltage,
-            from_=self.source_voltage_minmax[0],
-            to=self.source_voltage_minmax[1],
+            from_=source_voltage_minmax[0],
+            to=source_voltage_minmax[1],
             increment=0.1,
             wrap=True,
             style="TSpinbox"
@@ -550,11 +552,11 @@ class GUI:
             frame,
             variable=source_voltage,
             orient="horizontal",
-            from_=self.source_voltage_minmax[0],
-            to=self.source_voltage_minmax[1],
+            from_=source_voltage_minmax[0],
+            to=source_voltage_minmax[1],
             resolution=0.1,
             showvalue=0,
-            tickinterval=self.source_voltage_minmax[1] - self.source_voltage_minmax[0],
+            tickinterval=source_voltage_minmax[1] - source_voltage_minmax[0],
         )
         src_voltage_entry = Entry(frame, textvariable=source_voltage)
         src_voltage_label.grid(column=1, row=1)
@@ -593,7 +595,7 @@ class GUI:
         current_compliance_entry.grid(column=3, row=2)
         current_compliance_scale.grid(column=3, row=3)
 
-        
+
         # presets
         def store_preset():
             """
@@ -618,10 +620,8 @@ class GUI:
                 preset_entry.grid(column=0, row=1)
                 label2 = Label(window, text="When finished, exit the window.")
                 label2.grid(column=0, row=2)
-                label3 = Label(
-                    window,
-                    text="Note: You can rewrite an old preset by\n \
-                                  assigning a new preset the same name",
+                label3 = Label(window, text="Note: You can rewrite an old preset by\n \
+                                             assigning a new preset the same name",
                 )
                 label3.grid(column=0, row=4, pady=15)
 
@@ -698,16 +698,10 @@ class GUI:
             row_list = []
             for row in range(self._grid_size):
                 button = Button(
-                    frame,
-                    text=0,
-                    bg="light gray",
-                    activebackground="gray90",
-                    width=2,
-                    height=2,
+                    frame, text=0, bg="light gray", activebackground="gray90",
+                    width=2, height=2
                 )
-                button.grid(
-                    row=row + 1, column=col, sticky=NW + NE + SW + SE + N + S + E + W
-                )
+                button.grid(row=row + 1, column=col, sticky=NW + NE + SW + SE + N + S + E + W)
                 row_list.append(button)
             device_buttons.append(row_list)
 
@@ -792,9 +786,7 @@ class GUI:
                     for row in range(self._grid_size):
                         self._devices_grid[col][row] = 1
                         device_buttons[col][row].config(
-                            text="1",
-                            bg="deep sky blue",
-                            activebackground="light sky blue",
+                            text="1", bg="deep sky blue", activebackground="light sky blue"
                         )
             else:
                 select_all_button["text"] = "Select All"
@@ -830,10 +822,8 @@ class GUI:
                 preset_entry.grid(column=0, row=1)
                 label2 = Label(window, text="When finished, exit the window.")
                 label2.grid(column=0, row=2)
-                label3 = Label(
-                    window,
-                    text="Note: You can rewrite an old preset by\n \
-                                  assigning a new preset the same name",
+                label3 = Label(window, text="Note: You can rewrite an old preset by\n \
+                                             assigning a new preset the same name",
                 )
                 label3.grid(column=0, row=4, pady=15)
 
@@ -920,7 +910,7 @@ class GUI:
                         device_buttons[col][row].config(
                             text="0", bg="light gray", activebackground="gray90"
                         )
-        except:
+        except Exception as _:
             print("No previous data available")
 
     def gui_main_window(self):
@@ -936,13 +926,15 @@ class GUI:
                     saved_vals = json.load(openfile)
 
                 chiplet_name.set(saved_vals["chiplet_name"])
-            except:
+            except Exception as _:
                 print("Previous values not available.")
 
         get_start_values()
-        
+
         def add_iv(*args):
-            """ """
+            """ 
+            Creates IV test window to select parameters and add test to queue
+            """
             # Create new window
             window = Toplevel()
             # Ensure window always shows up in the same space
@@ -954,9 +946,9 @@ class GUI:
             self.iv_frame_create(window)
 
             # Wait to do anything else until popup window is closed
-            self._root.wait_variable(self.var)
-            """if(check_vars(self,self._iv_source_voltage_stop,self._iv_source_voltage_neg)):
-                print('Fix the Values')"""
+            self._root.wait_variable(self._var)
+            # if(check_vars(self,self._iv_source_voltage_stop,self._iv_source_voltage_neg)):
+            #   print('Fix the Values')
             window.destroy()
 
             # Make new IVTest object
@@ -982,7 +974,9 @@ class GUI:
             self._tests_requested.append(iv_test)
 
         def add_et(*args):
-            """ """
+            """ 
+            Creates Endurance Test window to set parameters and add test to queue
+            """
             # Create new window
             window = Toplevel()
             # Ensure window always shows up in the same space
@@ -1014,18 +1008,25 @@ class GUI:
             self._tests_requested.append(endurance_test)
 
         def add_set(*args):
-            """ """
+            """
+            adds a set event to the test queue
+            """
             test_lb.insert(END, f"Set {self._set_num}")
             self._set_num += 1
             self._tests_requested.append("Set")
 
         def add_reset(*args):
-            """ """
+            """
+            Adds a reset event to the test queue
+            """
             test_lb.insert(END, f"Reset {self._reset_num}")
             self._reset_num += 1
             self._tests_requested.append("Reset")
 
         def clear_lb(*args):
+            '''
+            Resets the test queue to empty
+            '''
             test_lb.delete(0, END)
             self._iv_test_num, self._et_test_num, self._set_num, self._reset_num = (
                 0,
@@ -1088,7 +1089,7 @@ class GUI:
             for test in self._tests_requested:
                 num_intervals += len(test.selected_devices)
             return 100.0 / num_intervals
-        except:
+        except Exception as _:
             print("No tests requested")
             return 100.0
 
@@ -1148,8 +1149,6 @@ def check_special_chars(string):
     return 0
 
 
-
-    
 
 gui = GUI()
 gui.gui_start()

@@ -106,7 +106,6 @@ def staircase_lin(
 
 def staircase_log(
     instrument,
-    is_up_down,
     current_compliance,
     source_voltage,
     source_delay,
@@ -114,6 +113,7 @@ def staircase_log(
     source_voltage_stop,
     log_num_steps,
     trig_count,
+    is_up_down = True
 ):
     """
     Instructions to be sent to the sourcemeter
@@ -188,7 +188,7 @@ def create_voltage_list(set_voltage, read_voltage, reset_voltage):
     creates the list of voltages for 5 cycles of the endurance test
     """
     voltage = []
-    for j in range(1, 6):
+    for _ in range(1, 6):
         voltage.append(set_voltage)
         voltage.append(0)
         voltage.append(read_voltage)

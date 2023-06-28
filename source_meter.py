@@ -74,8 +74,8 @@ class SourceMeter:
         Create an excel sheet containing relevant statistics and all test data
         for each test
         """
-        t = time.localtime()
-        current_time = time.strftime("%H_%M_%S", t)
+        local_time = time.localtime()
+        current_time = time.strftime("%H_%M_%S", local_time)
         main_folder = functions.create_chip_folder(self._gui.get_requested_tests()[0])
         master_file = os.path.join(main_folder, f"Summary_{current_time}.xlsx")
         for ran_test in self._ran_tests:
@@ -250,11 +250,11 @@ def create_master_excel(filename, ran_test, folder_path):
         i_max_neg = []
         hrs = []
         lrs = []
-        x = (device_test.x)
-        y = (device_test.y)
-        col.append(x)
-        row.append(y)
-        file_path = os.path.join(folder_path, f"Col{x}_Row{y}.xlsx")
+        device_x = device_test.x
+        device_y = device_test.y
+        col.append(device_x)
+        row.append(device_y)
+        file_path = os.path.join(folder_path, f"Col{device_x}_Row{device_y}.xlsx")
         data = pd.read_excel(os.path.normpath(file_path))
         split_data = split_dataframe(data)
         for data in split_data:
@@ -290,7 +290,7 @@ def create_master_excel(filename, ran_test, folder_path):
         if isinstance(test, tests.IVTest):
             split_data = split_dataframe(data)
             for data in split_data:
-                i_max_set, i_max_reset = (get_i_max(data))
+                i_max_set, i_max_reset = get_i_max(data)
                 i_max_pos.append(i_max_set)
                 i_max_neg.append(i_max_reset)
                 set_volt, reset_volt = find_set_reset(data)
@@ -349,7 +349,7 @@ def create_master_excel(filename, ran_test, folder_path):
                 + 1.5 * (np.percentile(i_max_neg, 75) - np.percentile(i_max_neg, 25))
             )
         elif isinstance(test, tests.EnduranceTest):
-            # Cannot calculate these in Endruance Test but they need to have equal lengths so fill them with None
+            # Not calculated in ET, but cols must be equal lengths so fill them with None
             set_v.append(None)
             reset_v.append(None)
             avg_set_volt.append(None)
@@ -416,7 +416,7 @@ def create_master_excel(filename, ran_test, folder_path):
     dataframe["Med. i_max_reset"] = med_i_max_reset
     dataframe["i_max_reset 1.5IQR Upper"] = upper_range_i_max_reset
     dataframe["i_max_reset 1.5IQR Lower"] = lower_range_i_max_reset
-    
+
     # Create File or Add to It
     if os.path.exists(filename):
         dataframe = pd.concat([pd.read_excel(filename), dataframe])
@@ -455,7 +455,8 @@ def get_i_max(dataframe):
 
 def split_dataframe(dataframe):
     """
-    Takes the large dataframe from multiple IV's and breaks it up into smalled dataframes that can be analyzed
+    Takes the large dataframe from multiple IV's and breaks it up into smalled
+    dataframes that can be analyzed
     Return: BrokenUp dataframe
     """
     split_dataframes = []
