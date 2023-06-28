@@ -1036,6 +1036,30 @@ class GUI:
             )
             self._tests_requested = []
 
+        def delete_selected_test(*args):
+            '''
+            removes currently selected test from the test queue
+            '''
+            index = test_lb.curselection()
+            test_lb.delete(index)
+            deleted_test = self._tests_requested.pop(index)
+            test_indicator = deleted_test.get_test_type()[0]
+            # Decrease test num for selected test type
+            if test_indicator == "E":
+                self._et_test_num -= 1
+            else:
+                self._iv_test_num -= 1
+
+            # Renumber any later tests of the same type
+            for i, test in enumerate(self._tests_requested[index:]):
+                if test.get_test_type()[0] == test_indicator:
+                    name = test_lb.get(i)
+                    trimmed_name = re.findall(r"^\D+\s\D+\s", name)[0]
+                    new_test_num = int(re.findall(r"\d+$", name)[0]) - 1
+                    test.test_num = new_test_num
+                    test_lb.insert(i, trimmed_name + str(new_test_num))
+
+
         # Chip name box
         name_frame = ttk.Frame(self._root, padding=(12, 5, 12, 0))
         name_frame.grid(column=4, columnspan=2, row=0, rowspan=4, sticky=(N, W, E, S))
@@ -1059,10 +1083,12 @@ class GUI:
         add_iv_button = Button(frame, text="Add IV Test", command=add_iv)
         add_et_button = Button(frame, text="Add Endurance Test", command=add_et)
         clear_lb_button = Button(frame, text="Clear Test Queue", command=clear_lb)
+        del_test_button = Button(frame, text="Delete Selected Test", command=delete_selected_test)
 
         test_lb_label.grid(column=1, columnspan=2, row=0)
         test_lb.grid(column=1, columnspan=2, row=1, rowspan=4)
         clear_lb_button.grid(column=1, columnspan=2, row=5, rowspan=1)
+        del_test_button.grid(column=1, columnspan=2, row=6, rowspan=1)
         add_iv_button.grid(column=0, columnspan=1, row=1, rowspan=1)
         add_et_button.grid(column=0, columnspan=1, row=2, rowspan=1)
         add_set_button.grid(column=0, columnspan=1, row=3, rowspan=1)
