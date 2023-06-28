@@ -48,7 +48,7 @@ class GUI:
         self._et_source_delay = DoubleVar(self._root)
         self._chiplet_name = StringVar(self._root)
 
-        self._var = IntVar(self._root)
+        self._test_queue = []
 
         # create a grid for storing the positions of selected devices
         self._grid_size = 8
@@ -241,11 +241,37 @@ class GUI:
             increment=1,
             wrap=True
         )
-        self._var.set(0)
+
+        def add_test(*args):
+            '''
+            not empty
+            '''
+            window.destroy()
+                        # Make new IVTest object
+            iv_test = tests.IVTest(
+                grid=self._devices_grid,
+                test_num=self._iv_test_num,
+                chiplet_name=self._chiplet_name.get(),
+                space=self._iv_space.get(),
+                source_voltage=self._iv_source_voltage.get(),
+                source_delay=self._iv_source_delay.get(),
+                source_voltage_start=self._iv_source_voltage_start.get(),
+                source_voltage_stop=self._iv_source_voltage_stop.get(),
+                source_voltage_neg=self._iv_source_voltage_neg.get(),
+                num_steps=self._iv_num_steps.get(),
+                neg_steps=self._iv_neg_steps.get(),
+                current_compliance=self._iv_current_compliance.get(),
+                cycles=self._iv_cycles.get(),
+                accuracy=self._iv_accuracy.get()
+            )
+            self._test_queue.append(f"IV Test {self._iv_test_num}")
+            self._iv_test_num += 1
+            self._tests_requested.append(iv_test)
+
         button = Button(
             frame,
             text="Add Test",
-            command=lambda: self._var.set(1),
+            command=lambda: add_test(),
             width=25,
             height=3,
             background="red",
@@ -946,32 +972,12 @@ class GUI:
             self.iv_frame_create(window)
 
             # Wait to do anything else until popup window is closed
-            self._root.wait_variable(self._var)
+            self._root.wait_window(window)
             # if(check_vars(self,self._iv_source_voltage_stop,self._iv_source_voltage_neg)):
             #   print('Fix the Values')
-            window.destroy()
+            test_lb["listvariable"] = Variable(value=self._test_queue)
 
-            # Make new IVTest object
-            iv_test = tests.IVTest(
-                grid=self._devices_grid,
-                test_num=self._iv_test_num,
-                chiplet_name=self._chiplet_name.get(),
-                space=self._iv_space.get(),
-                source_voltage=self._iv_source_voltage.get(),
-                source_delay=self._iv_source_delay.get(),
-                source_voltage_start=self._iv_source_voltage_start.get(),
-                source_voltage_stop=self._iv_source_voltage_stop.get(),
-                source_voltage_neg=self._iv_source_voltage_neg.get(),
-                num_steps=self._iv_num_steps.get(),
-                neg_steps=self._iv_neg_steps.get(),
-                current_compliance=self._iv_current_compliance.get(),
-                cycles=self._iv_cycles.get(),
-                accuracy=self._iv_accuracy.get()
-            )
 
-            test_lb.insert(END, f"IV Test {self._iv_test_num}")
-            self._iv_test_num += 1
-            self._tests_requested.append(iv_test)
 
         def add_et(*args):
             """ 
@@ -1002,8 +1008,8 @@ class GUI:
                 read_voltage=self._et_read_voltage.get(),
                 reset_voltage=self._et_reset_voltage.get(),
             )
-
-            test_lb.insert(END, f"Endurance Test {self._et_test_num}")
+            self._test_queue.append(f"Endurance Test {self._et_test_num}")
+            test_lb["listvariable"] = Variable(value=self._test_queue)
             self._et_test_num += 1
             self._tests_requested.append(endurance_test)
 
@@ -1011,7 +1017,8 @@ class GUI:
             """
             adds a set event to the test queue
             """
-            test_lb.insert(END, f"Set {self._set_num}")
+            self._test_queue.append(f"Set {self._set_num}")
+            test_lb["listvariable"] = Variable(value=self._test_queue)
             self._set_num += 1
             self._tests_requested.append("Set")
 
@@ -1019,7 +1026,8 @@ class GUI:
             """
             Adds a reset event to the test queue
             """
-            test_lb.insert(END, f"Reset {self._reset_num}")
+            self._test_queue.append(f"Reset {self._reset_num}")
+            test_lb["listvariable"] = Variable(value=self._test_queue)
             self._reset_num += 1
             self._tests_requested.append("Reset")
 
@@ -1035,15 +1043,16 @@ class GUI:
                 0,
             )
             self._tests_requested = []
+            self._test_queue = []
 
         def delete_selected_test(*args):
             '''
             removes currently selected test from the test queue
             '''
             index = test_lb.curselection()
-            test_lb.delete(index)
             deleted_test = self._tests_requested.pop(index)
             test_indicator = deleted_test.get_test_type()[0]
+            del self._test_queue[index]
             # Decrease test num for selected test type
             if test_indicator == "E":
                 self._et_test_num -= 1
@@ -1053,11 +1062,11 @@ class GUI:
             # Renumber any later tests of the same type
             for i, test in enumerate(self._tests_requested[index:]):
                 if test.get_test_type()[0] == test_indicator:
-                    name = test_lb.get(i)
+                    name = self._test_queue[i]
                     trimmed_name = re.findall(r"^\D+\s\D+\s", name)[0]
                     new_test_num = int(re.findall(r"\d+$", name)[0]) - 1
                     test.test_num = new_test_num
-                    test_lb.insert(i, trimmed_name + str(new_test_num))
+                    self._test_queue.insert(i, trimmed_name + str(new_test_num))
 
 
         # Chip name box
