@@ -12,6 +12,7 @@ import tests
 import functions
 import microserial
 import post_test_gui
+import progress_gui
 
 
 class SourceMeter:
@@ -58,7 +59,7 @@ class SourceMeter:
             device_test_list = []
             for coords in test.selected_devices:
                 # Tell microcontroller what device we are targeting
-                #microserial.message_micro(coords.x, coords.y)
+                # microserial.message_micro(coords.x, coords.y)
                 # Run the test
                 data = test.run_sourcemeter(self._instrument)
                 # Save the test data linked to the device coords
@@ -90,7 +91,6 @@ class SourceMeter:
                 filename = f"{folder_path}\Col{col}_Row{row}.xlsx"
                 dataframe.to_excel(filename, index=False)
             create_master_excel(master_file, ran_test, folder_path)
-
     def run_post_test_gui(self):
         """
         Run the post test gui after the tests have been run
@@ -257,6 +257,7 @@ def create_master_excel(filename, ran_test, folder_path):
         file_path = os.path.join(folder_path, f"Col{device_x}_Row{device_y}.xlsx")
         data = pd.read_excel(os.path.normpath(file_path))
         split_data = split_dataframe(data)
+        # If there are multiple cycles in one test this breaks them down and splits into individual cycles
         for data in split_data:
             hrs.append(functions.find_hrs(data))
             lrs.append(functions.find_lrs(data))
@@ -417,7 +418,7 @@ def create_master_excel(filename, ran_test, folder_path):
     dataframe["i_max_reset 1.5IQR Upper"] = upper_range_i_max_reset
     dataframe["i_max_reset 1.5IQR Lower"] = lower_range_i_max_reset
 
-    # Create File or Add to It
+    # Create File or Add to it
     if os.path.exists(filename):
         dataframe = pd.concat([pd.read_excel(filename), dataframe])
         dataframe.to_excel(filename, index=False)
@@ -444,7 +445,8 @@ def find_set_reset(dataframe):
 
 def get_i_max(dataframe):
     """
-    Grabs the largest Current in the dataframe
+    Grabs the two largest currents in the dataframe,
+    one when voltage postitive and other when its negative
     """
     set_df = dataframe[dataframe["Voltage"] > 0]
     i_max_set = max(set_df["Current"])

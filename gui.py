@@ -79,6 +79,7 @@ class GUI:
     def iv_frame_create(self, window):
         """
         Create IV GUI frame
+        This is where you edit max and min values for gui
         """
         # Redefine variables
         source_voltage = self._iv_source_voltage
@@ -103,7 +104,7 @@ class GUI:
         frame = ttk.Frame(window, padding=(12, 5, 12, 0))
         frame.grid(column=0, row=0, sticky=(N, W, E, S))
         frame.configure(borderwidth=5, relief="raised")
-
+        
         # Create option lists for non-numeric inputs
         sweep_space_label = Label(frame, text="Sweep Space:")
         ss_choice_1 = Radiobutton(frame, text="Linear", variable=spacename, value="LIN")
@@ -112,11 +113,11 @@ class GUI:
         )
 
         # Set starting values based on previous set values
-        def get_start_values(filepath="values.json"):
+        def get_start_values(filepath):
             try:  # Open JSON file if one exists, otherwise tell user no previous data available
                 with open(filepath, "r") as openfile:
                     saved_vals = json.load(openfile)
-
+                print(filepath)
                 # Take previous values from JSON file and give everything a starting value
                 source_voltage.set(saved_vals["iv_source_voltage"])
                 source_delay.set(saved_vals["iv_source_delay"])
@@ -128,19 +129,21 @@ class GUI:
                 current_compliance.set(saved_vals["iv_current_compliance"])
                 accuracy.set(saved_vals["iv_accuracy"])
                 spacename.set(saved_vals["iv_space"])
-                cycles.set(saved_vals("iv_cycles"))
+                cycles.set(saved_vals["iv_cycles"])
             except Exception as _:
+                pass
                 print("Previous values not available.1")
+            
 
-        get_start_values()
-
+        get_start_values("values.json")
+        
         # Label the frame
         iv_test_label = Label(frame, text="IV Test Parameters")
         iv_test_label.configure(font=("Arial", 28))
 
         # Create sliders and text entry points for numeric inputs
         src_voltage_label = Label(frame, text="Source Voltage:")
-        src_voltage_scale = Spinbox(
+        src_voltage_scale = ttk.Spinbox(
             frame,
             from_=source_voltage_minmax[0],
             to=source_voltage_minmax[1],
@@ -150,7 +153,7 @@ class GUI:
         )
 
         src_delay_label = Label(frame, text="Source delay:")
-        src_delay_scale = Spinbox(
+        src_delay_scale = ttk.Spinbox(
             frame,
             textvariable=source_delay,
             from_=source_delay_minmax[0],
@@ -159,7 +162,7 @@ class GUI:
             wrap=True
         )
         src_voltage_start_label = Label(frame, text="Source Voltage Start:")
-        src_voltage_start_scale = Spinbox(
+        src_voltage_start_scale = ttk.Spinbox(
             frame,
             textvariable=source_voltage_start,
             from_=source_voltage_minmax[0],
@@ -192,7 +195,7 @@ class GUI:
         )
 
         num_steps_label = Label(frame, text="Number of Steps:")
-        num_steps_scale = Spinbox(
+        num_steps_scale = ttk.Spinbox(
             frame,
             textvariable=num_steps,
             from_=num_steps_minmax[0],
@@ -202,7 +205,7 @@ class GUI:
         )
 
         neg_steps_label = Label(frame, text="Negative Steps")
-        neg_steps_scale = Spinbox(
+        neg_steps_scale = ttk.Spinbox(
             frame,
             textvariable=neg_steps,
             from_=num_steps_minmax[0],
@@ -213,7 +216,7 @@ class GUI:
 
 
         accuracy_label = Label(frame, text="Accuracy:")
-        accuracy_scale = Spinbox(
+        accuracy_scale = ttk.Spinbox(
             frame,
             textvariable=accuracy,
             from_=0.01,
@@ -223,7 +226,7 @@ class GUI:
         )
 
         current_compliance_label = Label(frame, text="Current Compliance:")
-        current_compliance_scale = Spinbox(
+        current_compliance_scale = ttk.Spinbox(
             frame,
             textvariable=current_compliance,
             from_=current_minmax[0],
@@ -233,7 +236,7 @@ class GUI:
         )
 
         cycles_label = Label(frame, text="Cycles")
-        cycles_scale = Spinbox(
+        cycles_scale = ttk.Spinbox(
             frame,
             textvariable=cycles,
             from_=1,
@@ -241,10 +244,10 @@ class GUI:
             increment=1,
             wrap=True
         )
-
+        warning_label = Label(frame, text ='',wraplength=200,fg='Red')
         def add_test(*args):
             '''
-            not empty
+            Adds test to test list and closes current window
             '''
             window.destroy()
                         # Make new IVTest object
@@ -267,20 +270,27 @@ class GUI:
             self._test_queue.append(f"IV Test {self._iv_test_num}")
             self._iv_test_num += 1
             self._tests_requested.append(iv_test)
-
         button = Button(
             frame,
             text="Add Test",
-            command=lambda: add_test(),
+            command=lambda:add_test(),
             width=25,
             height=3,
-            background="red",
-            activebackground="tomato",
+            background="white",
+            activebackground="light blue",
         )
-
-
-        # Place items in frame
+        #Press Enter to add test
+        frame.focus_set()
+        frame.bind('<Return>', lambda event: add_test())
+        frame.bind_class('TSpinbox','<Return>', lambda event: add_test())
+        frame.bind('<Escape>', lambda event: window.destroy())
+        frame.bind_class('TSpinbox','<Escape>', lambda event: window.destroy())
+        
         def grid_assign():
+            """
+            Place items in frame 
+            """
+            warning_label.grid(column=4,columnspan=2,row=8,padx=10)
             iv_test_label.grid(column=0, columnspan=5, row=0)
 
             sweep_space_label.grid(column=0, row=1)
@@ -319,27 +329,43 @@ class GUI:
             cycles_label.grid(column=4, columnspan=1, row=4, padx=10)
             cycles_scale.grid(column=4, columnspan=1, row=5, padx=10, pady=0)
 
-            button.grid(column=5, columnspan=2, row=8, rowspan=2, padx=0)
+            button.grid(column=9, columnspan=2, row=8, rowspan=2, padx=0)
 
         grid_assign()
         def check_stop_voltage(*args):
+            """
+                Uses max and min values for voltage to warn user when they have inputted something outside the range
+            """
             try:
                 value = source_voltage_stop.get()
                 if value > source_voltage_minmax[1]:
                     src_voltage_stop_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'One or more values are potentially dangerous for the device.'
+                    warning_label['fg'] = 'Red'
                 else:
                     src_voltage_stop_scale["style"] = "TSpinbox"
+                    warning_label['text'] = ':)'
+                    warning_label['fg'] = 'Black'
             except Exception as _:
                 pass
         def check_neg_voltage(*args):
+            """
+                Uses max and min values for voltage to warn user when they have inputted something outside the range
+            """
             try:
                 value = source_voltage_neg.get()
                 if value < source_voltage_neg_minmax[0]:
                     src_voltage_neg_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'One or more values are potentially dangerous for the device.'
+                    warning_label['fg'] = 'Red'
                 elif value> source_voltage_neg_minmax[1]:
                     src_voltage_neg_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'One or more values are potentially dangerous for the device.'
+                    warning_label['fg'] = 'Red'
                 else:
                     src_voltage_neg_scale["style"] = "TSpinbox"
+                    warning_label['text'] = ':)'
+                    warning_label['fg'] = 'Black'
             except Exception as _:
                 pass
         # Presets
@@ -398,7 +424,6 @@ class GUI:
                 }
                 with open(f"IVTestPresets/{preset_name}.json", "w") as outfile:
                     json.dump(dictionary, outfile)
-
             update_preset_list()
 
         def load_preset():
@@ -406,13 +431,17 @@ class GUI:
             Read from json file of selected preset and update current IVTest config to match
             """
             preset_name = selected_preset.get()
-            get_start_values(f"IVTestPresets/{preset_name}.json")
+            get_start_values(f"IVTestPresets/{preset_name}")
 
         save_preset_button = Button(frame, text="save preset", command=store_preset)
         save_preset_button.grid(column=9, row=3)
 
         selected_preset = StringVar()
         presets = ttk.Combobox(frame, width=27, textvariable=selected_preset)
+        presets.focus_set()
+        frame.bind_class('TCombobox','l',func= lambda event:load_preset())
+        frame.bind_class('TCombobox','<Return>',func= lambda event: add_test())
+        frame.bind_class('TCombobox','<Escape>',func= lambda event: window.destroy())
         presets.grid(column=9, row=1)
 
         # Create a list of files in DevicePresets folder
@@ -450,7 +479,7 @@ class GUI:
         current_minmax = [0.0, 0.01]
         cycles_minmax = [5, 500]
 
-        def get_start_values(filename="values.json"):
+        def get_start_values(filename):
             """
             Attempts to collect most recent values to preset gui inputs
             """
@@ -469,15 +498,19 @@ class GUI:
             except Exception as _:
                 print("Previous values not available.")
 
-        get_start_values()
+        get_start_values("values.json")
 
         def check_set_voltage(*args):
             try:
                 value = set_voltage.get()
                 if value > set_voltage_minmax[1]:
                     set_voltage_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'One or more values are potentially dangerous for the device.'
+                    warning_label['fg'] = 'Red'
                 else:
                     set_voltage_scale["style"] = "TSpinbox"
+                    warning_label['text'] = ':)'
+                    warning_label['fg'] = 'Black'
             except Exception as _:
                 pass
         def check_reset_voltage(*args):
@@ -485,10 +518,16 @@ class GUI:
                 value = reset_voltage.get()
                 if value < reset_voltage_minmax[0]:
                     reset_voltage_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'One or more values are potentially dangerous for the device.'
+                    warning_label['fg'] = 'Red'
                 elif value> reset_voltage_minmax[1]:
                     reset_voltage_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'One or more values are potentially dangerous for the device.'
+                    warning_label['fg'] = 'Red'
                 else:
                     reset_voltage_scale["style"] = "TSpinbox"
+                    warning_label['text'] = ':)'
+                    warning_label['fg'] = 'Black'
             except Exception as _:
                 pass
         def check_read_voltage(*args):
@@ -496,10 +535,29 @@ class GUI:
                 value = read_voltage.get()
                 if value < read_voltage_minmax[0]:
                     read_voltage_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'One or more values are potentially dangerous for the device.'
+                    warning_label['fg'] = 'Red'
                 elif value> read_voltage_minmax[1]:
                     read_voltage_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'One or more values are potentially dangerous for the device.'
+                    warning_label['fg'] = 'Red'
                 else:
                     read_voltage_scale["style"] = "TSpinbox"
+                    warning_label['text'] = ':)'
+                    warning_label['fg'] = 'Black'
+            except Exception as _:
+                pass
+        def check_cycles(*args):
+            try:
+                value = cycles.get()
+                if value%5!=0:
+                    cycles_scale["style"] = "Red.TSpinbox"
+                    warning_label['text'] = 'Cycles must be divisible by 5.'
+                    warning_label['fg'] = 'Red'
+                else:
+                    cycles_scale["style"] = "TSpinbox"
+                    warning_label['text'] = ':)'
+                    warning_label['fg'] = 'Black'
             except Exception as _:
                 pass
 
@@ -558,70 +616,85 @@ class GUI:
         read_voltage.trace_add("write",callback=lambda *args: check_read_voltage())
 
         cycles_label = Label(frame, text="Number of Cycles:")
-        cycles_scale = Scale(
+        cycles_scale = ttk.Spinbox(
             frame,
-            variable=cycles,
-            orient="horizontal",
+            textvariable=cycles,
             from_=cycles_minmax[0],
             to=cycles_minmax[1],
-            resolution=5,
-            showvalue=0,
-            tickinterval=cycles_minmax[1] - cycles_minmax[0],
+            increment=5,
+            style = "TSpinbox"
         )
-        cycles_entry = Entry(frame, textvariable=cycles)
         cycles_label.grid(column=2, row=1)
-        cycles_entry.grid(column=2, row=2)
-        cycles_scale.grid(column=2, row=3)
+        cycles_scale.grid(column=2, row=2)
+        cycles.trace_add("write",callback=lambda *args: check_cycles())
 
         src_voltage_label = Label(frame, text="Source Voltage:")
-        src_voltage_scale = Scale(
+        src_voltage_scale = ttk.Spinbox(
             frame,
-            variable=source_voltage,
-            orient="horizontal",
+            textvariable=source_voltage,
             from_=source_voltage_minmax[0],
             to=source_voltage_minmax[1],
-            resolution=0.1,
-            showvalue=0,
-            tickinterval=source_voltage_minmax[1] - source_voltage_minmax[0],
+            increment=0.1
         )
-        src_voltage_entry = Entry(frame, textvariable=source_voltage)
         src_voltage_label.grid(column=1, row=1)
-        src_voltage_entry.grid(column=1, row=2)
-        src_voltage_scale.grid(column=1, row=3)
+        src_voltage_scale.grid(column=1, row=2)
 
         src_delay_label = Label(frame, text="Source delay:")
-        src_delay_scale = Scale(
+        src_delay_scale = ttk.Spinbox(
             frame,
-            variable=source_delay,
-            orient="horizontal",
+            textvariable=source_delay,
             from_=source_delay_minmax[0],
             to=source_delay_minmax[1],
-            resolution=0.01,
-            showvalue=0,
-            tickinterval=source_delay_minmax[1] - source_delay_minmax[0],
+            increment=0.01
         )
-        src_delay_entry = Entry(frame, textvariable=source_delay)
         src_delay_label.grid(column=1, row=4)
-        src_delay_entry.grid(column=1, row=5)
-        src_delay_scale.grid(column=1, row=6)
+        src_delay_scale.grid(column=1, row=5)
 
         current_compliance_label = Label(frame, text="Current Compliance:")
-        current_compliance_scale = Scale(
+        current_compliance_scale = ttk.Spinbox(
             frame,
-            variable=current_compliance,
-            orient="horizontal",
+            textvariable=current_compliance,
             from_=current_minmax[0],
             to=current_minmax[1],
-            resolution=0.00001,
-            showvalue=0,
-            tickinterval=current_minmax[1] - current_minmax[0],
+            increment=0.001
         )
-        current_compliance_entry = Entry(frame, textvariable=current_compliance)
         current_compliance_label.grid(column=3, row=1)
-        current_compliance_entry.grid(column=3, row=2)
-        current_compliance_scale.grid(column=3, row=3)
+        current_compliance_scale.grid(column=3, row=2)
+        def add_test(*args):
+            window.destroy()
+            endurance_test = tests.EnduranceTest(
+                    grid=self._devices_grid,
+                    test_num=self._et_test_num,
+                    chiplet_name=self._chiplet_name.get(),
+                    source_voltage=self._et_source_voltage.get(),
+                    source_delay=self._et_source_delay.get(),
+                    current_compliance=self._et_current_compliance.get(),
+                    cycles=self._et_cycles.get(),
+                    set_voltage=self._et_set_voltage.get(),
+                    read_voltage=self._et_read_voltage.get(),
+                    reset_voltage=self._et_reset_voltage.get(),
+                )
+            self._test_queue.append(f"Endurance Test {self._et_test_num}")
+            self._et_test_num += 1
+            self._tests_requested.append(endurance_test)
+        warning_label = Label(frame, text ='',wraplength=100,fg='Red')
+        warning_label.grid(column=2, columnspan=1, row=8, padx=0, pady=0)
 
-
+        button = Button(
+            frame,
+            text="Add Test",
+            command=lambda: add_test(),
+            width=25,
+            height=3,
+            background="white",
+            activebackground="light blue",
+        )
+        frame.focus_set()
+        frame.bind('<Return>', lambda event: add_test())
+        frame.bind_class('TSpinbox','<Return>', lambda event: add_test())
+        frame.bind('<Escape>', lambda event: window.destroy())
+        frame.bind_class('TSpinbox','<Escape>', lambda event: window.destroy())
+        button.grid(column=9, columnspan=2, row=8, rowspan=2, padx=0)
         # presets
         def store_preset():
             """
@@ -680,13 +753,17 @@ class GUI:
             Read from json file of selected preset and update current IVTest config to match
             """
             preset_name = selected_preset.get()
-            get_start_values(f"EnduranceTestPresets/{preset_name}.json")
+            get_start_values(f"EnduranceTestPresets/{preset_name}")
 
         save_preset_button = Button(frame, text="save preset", command=store_preset)
         save_preset_button.grid(column=9, row=3)
 
         selected_preset = StringVar()
         presets = ttk.Combobox(frame, width=27, textvariable=selected_preset)
+        presets.focus_set()
+        frame.bind_class('TCombobox','l',func= lambda event:load_preset())
+        frame.bind_class('TCombobox','<Return>',func= lambda event: add_test())
+        frame.bind_class('TCombobox','<Escape>',func= lambda event: window.destroy())
         presets.grid(column=9, row=1)
 
         # Create a list of files in DevicePresets folder
@@ -996,40 +1073,8 @@ class GUI:
             # Wait to do anything else until popup window is closed
             self._root.wait_window(window)
             # Make new EnduranceTest object
-            endurance_test = tests.EnduranceTest(
-                grid=self._devices_grid,
-                test_num=self._et_test_num,
-                chiplet_name=self._chiplet_name.get(),
-                source_voltage=self._et_source_voltage.get(),
-                source_delay=self._et_source_delay.get(),
-                current_compliance=self._et_current_compliance.get(),
-                cycles=self._et_cycles.get(),
-                set_voltage=self._et_set_voltage.get(),
-                read_voltage=self._et_read_voltage.get(),
-                reset_voltage=self._et_reset_voltage.get(),
-            )
-            self._test_queue.append(f"Endurance Test {self._et_test_num}")
             test_lb["listvariable"] = Variable(value=self._test_queue)
-            self._et_test_num += 1
-            self._tests_requested.append(endurance_test)
 
-        def add_set(*args):
-            """
-            adds a set event to the test queue
-            """
-            self._test_queue.append(f"Set {self._set_num}")
-            test_lb["listvariable"] = Variable(value=self._test_queue)
-            self._set_num += 1
-            self._tests_requested.append("Set")
-
-        def add_reset(*args):
-            """
-            Adds a reset event to the test queue
-            """
-            self._test_queue.append(f"Reset {self._reset_num}")
-            test_lb["listvariable"] = Variable(value=self._test_queue)
-            self._reset_num += 1
-            self._tests_requested.append("Reset")
 
         def clear_lb(*args):
             '''
@@ -1049,7 +1094,7 @@ class GUI:
             '''
             removes currently selected test from the test queue
             '''
-            index = test_lb.curselection()
+            index = test_lb.curselection()[0]
             deleted_test = self._tests_requested.pop(index)
             test_indicator = deleted_test.get_test_type()[0]
             del self._test_queue[index]
@@ -1067,7 +1112,7 @@ class GUI:
                     new_test_num = int(re.findall(r"\d+$", name)[0]) - 1
                     test.test_num = new_test_num
                     self._test_queue.insert(i, trimmed_name + str(new_test_num))
-
+            test_lb["listvariable"] = Variable(value=self._test_queue)
 
         # Chip name box
         name_frame = ttk.Frame(self._root, padding=(12, 5, 12, 0))
@@ -1080,28 +1125,30 @@ class GUI:
 
         # Device grid box
         self.device_select_frame_create(self._root, col=0, row=0)
-
         # Test queue box
         frame = ttk.Frame(self._root, padding=(12, 5, 12, 0))
         frame.grid(column=2, columnspan=2, row=0, rowspan=4, sticky=(N, W, E, S))
         frame.configure(borderwidth=5, relief="raised")
         test_lb = Listbox(frame, selectmode="BROWSE")
         test_lb_label = Label(frame, text="Test Queue:")
-        add_set_button = Button(frame, text="Set", command=add_set)
-        add_reset_button = Button(frame, text="Reset", command=add_reset)
+        keyboard_label = Label(frame, text="Keyboard Shortcuts: \n I - IV Test, L - Load Preset, \n E - Endurance, Enter - Send Test, Esc - Exit Window")
         add_iv_button = Button(frame, text="Add IV Test", command=add_iv)
         add_et_button = Button(frame, text="Add Endurance Test", command=add_et)
         clear_lb_button = Button(frame, text="Clear Test Queue", command=clear_lb)
         del_test_button = Button(frame, text="Delete Selected Test", command=delete_selected_test)
-
+        
+        self._root.focus_set()
+        self._root.bind('i',func= lambda event:add_iv())
+        self._root.bind('e',func= lambda event:add_et())
+        
         test_lb_label.grid(column=1, columnspan=2, row=0)
+        keyboard_label.grid(column=1, columnspan=1, row = 8)
         test_lb.grid(column=1, columnspan=2, row=1, rowspan=4)
         clear_lb_button.grid(column=1, columnspan=2, row=5, rowspan=1)
         del_test_button.grid(column=1, columnspan=2, row=6, rowspan=1)
         add_iv_button.grid(column=0, columnspan=1, row=1, rowspan=1)
         add_et_button.grid(column=0, columnspan=1, row=2, rowspan=1)
-        add_set_button.grid(column=0, columnspan=1, row=3, rowspan=1)
-        add_reset_button.grid(column=0, columnspan=1, row=4, rowspan=1)
+       
 
         # Run button
         button = Button(
@@ -1113,8 +1160,10 @@ class GUI:
             background="red",
             activebackground="tomato",
         )
+        self._root.focus_set()
+        self._root.bind('<Return>',lambda event: self.set_values())
+        self._root.bind('<Escape>',lambda event: self._root.destroy())
         button.grid(column=4, columnspan=2, row=4, rowspan=2, padx=0)
-
     def define_progress_interval(self):
         """
         Returns a double from 0 to 100 that is the size a single progressbar step should be
@@ -1123,11 +1172,13 @@ class GUI:
         try:
             for test in self._tests_requested:
                 num_intervals += len(test.selected_devices)
+                print(num_intervals)
             return 100.0 / num_intervals
         except Exception as _:
             print("No tests requested")
             return 100.0
-
+        
+        
     def set_values(self):
         """
         Run whenever run button on GUI is pressed
@@ -1164,9 +1215,8 @@ class GUI:
         # Save device grid
         dataframe = pd.DataFrame(self._devices_grid)
         dataframe.to_csv("device_grid_last_vals.csv", header=False, index=False)
-
         self._root.destroy()
-
+        
     def get_requested_tests(self):
         """
         Returns a list of tests in order to be conducted
