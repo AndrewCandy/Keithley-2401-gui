@@ -1,18 +1,19 @@
 """
 Controller module for sourcemeter gui
 """
-from collections import namedtuple
 import os
 import time
-import pyvisa
+from collections import namedtuple
+
 import numpy as np
 import pandas as pd
-import gui
-import tests
+import pyvisa
+
 import functions
+import gui
 import microserial
 import post_test_gui
-import progress_gui
+import tests
 
 
 class SourceMeter:
@@ -79,6 +80,7 @@ class SourceMeter:
         current_time = time.strftime("%H_%M_%S", local_time)
         main_folder = functions.create_chip_folder(self._gui.get_requested_tests()[0])
         master_file = os.path.join(main_folder, f"Summary_{current_time}.xlsx")
+        parameter_file = os.path.join(main_folder, f"Parameters_{current_time}.xlsx")
         for ran_test in self._ran_tests:
             test = ran_test.test
             device_test_list = ran_test.device_test_list
@@ -91,13 +93,148 @@ class SourceMeter:
                 filename = f"{folder_path}\Col{col}_Row{row}.xlsx"
                 dataframe.to_excel(filename, index=False)
             create_master_excel(master_file, ran_test, folder_path)
+            parameter_dataframe(parameter_file, ran_test)
+        return master_file
+
+
     def run_post_test_gui(self):
         """
         Run the post test gui after the tests have been run
         """
-        results_gui = post_test_gui.ResultsGUI(self._gui.get_requested_tests())
+        master_file = self.create_excel_sheets()
+        results_gui = post_test_gui.ResultsGUI(self._gui.get_requested_tests(), master_file)
         results_gui.gui_start()
 
+
+def parameter_dataframe(filename, ran_test):
+    # Create Variables for columns
+    col = []
+    row = []
+    space = []
+    start_v = []
+    stop_v = []
+    neg_v = []
+    set_v = []
+    reset_v = []
+    read_v = []
+    steps_up = []
+    steps_down = []
+    delay = []
+    accuracy = []
+    current_comp = []
+    cycles = []
+    col_names = [
+        "Chip Name",
+        "Test Type",
+        "Column",
+        "Row",
+        "Spacing",
+        "Start V",
+        "Stop V",
+        "Neg V",
+        "Set_V",
+        "Reset V",
+        "Read V",
+        "Steps Up",
+        "Steps Down",
+        "Delay",
+        "Accuracy",
+        "Current Comp.",
+        "Cycles",
+    ]
+    dataframe = pd.DataFrame(columns=col_names) 
+    test = ran_test.test
+    device_test_list = ran_test.device_test_list
+    chip_name = [test.chiplet_name] * len(device_test_list)
+    test_type = [test.get_test_type()] * len(device_test_list)
+    for device_test in device_test_list:
+        device_x = device_test.x
+        device_y = device_test.y
+        col.append(device_x)
+        row.append(device_y)
+        if isinstance(test, tests.IVTest):
+            iv_parameters = test.get_test_parameters()
+            space.append(iv_parameters[0])
+            start_v.append(iv_parameters[1])
+            stop_v.append(iv_parameters[2])
+            neg_v.append(iv_parameters[3])
+            set_v.append(iv_parameters[4])
+            reset_v.append(iv_parameters[5])
+            read_v.append(iv_parameters[6])
+            steps_up.append(iv_parameters[7])
+            steps_down.append(iv_parameters[8])
+            delay.append(iv_parameters[9])
+            accuracy.append(iv_parameters[10])
+            current_comp.append(iv_parameters[11])
+            cycles.append(iv_parameters[12])
+        elif isinstance(test, tests.FormingTest):
+            forming_parameters = test.get_test_parameters()
+            space.append(forming_parameters[0])
+            start_v.append(forming_parameters[1])
+            stop_v.append(forming_parameters[2])
+            neg_v.append(forming_parameters[3])
+            set_v.append(forming_parameters[4])
+            reset_v.append(forming_parameters[5])
+            read_v.append(forming_parameters[6])
+            steps_up.append(forming_parameters[7])
+            steps_down.append(forming_parameters[8])
+            delay.append(forming_parameters[9])
+            accuracy.append(forming_parameters[10])
+            current_comp.append(forming_parameters[11])
+            cycles.append(forming_parameters[12])
+        elif isinstance(test, tests.EnduranceTest):
+            et_parameters = test.get_test_parameters()
+            space.append(et_parameters[0])
+            start_v.append(et_parameters[1])
+            stop_v.append(et_parameters[2])
+            neg_v.append(et_parameters[3])
+            set_v.append(et_parameters[4])
+            reset_v.append(et_parameters[5])
+            read_v.append(et_parameters[6])
+            steps_up.append(et_parameters[7])
+            steps_down.append(et_parameters[8])
+            delay.append(et_parameters[9])
+            accuracy.append(et_parameters[10])
+            current_comp.append(et_parameters[11])
+            cycles.append(et_parameters[12])
+        elif isinstance(test, tests.ReadTest):
+            rt_parameters = test.get_test_parameters()
+            space.append(rt_parameters[0])
+            start_v.append(rt_parameters[1])
+            stop_v.append(rt_parameters[2])
+            neg_v.append(rt_parameters[3])
+            set_v.append(rt_parameters[4])
+            reset_v.append(rt_parameters[5])
+            read_v.append(rt_parameters[6])
+            steps_up.append(rt_parameters[7])
+            steps_down.append(rt_parameters[8])
+            delay.append(rt_parameters[9])
+            accuracy.append(rt_parameters[10])
+            current_comp.append(rt_parameters[11])
+            cycles.append(rt_parameters[12])
+    dataframe["Chip Name"] = chip_name
+    dataframe["Test Type"] = test_type
+    dataframe["Column"] = col   
+    dataframe["Row"] = row
+    dataframe["Spacing"] = space
+    dataframe["Start V"] = start_v
+    dataframe["Stop V"] = stop_v
+    dataframe["Neg V"] = neg_v
+    dataframe["Set_V"] = set_v
+    dataframe["Reset V"] = reset_v
+    dataframe["Read V"] = read_v
+    dataframe["Steps Up"] = steps_up
+    dataframe["Steps Down"] = steps_down
+    dataframe["Delay"] = delay
+    dataframe["Accuracy"] = accuracy
+    dataframe["Current Comp."] = current_comp
+    dataframe["Cycles"] = cycles
+    if os.path.exists(filename):
+        dataframe = pd.concat([pd.read_excel(filename), dataframe])
+        dataframe.to_excel(filename, index=False)
+    else:
+        dataframe.to_excel(filename, index=False)
+            
 
 def create_dataframe(data_string):
     """
@@ -258,45 +395,33 @@ def create_master_excel(filename, ran_test, folder_path):
         data = pd.read_excel(os.path.normpath(file_path))
         split_data = split_dataframe(data)
         # If there are multiple cycles in one test this breaks them down and splits into individual cycles
-        for data in split_data:
-            hrs.append(functions.find_hrs(data))
-            lrs.append(functions.find_lrs(data))
-        avg_hrs.append(np.mean(hrs))
-        avg_lrs.append(np.mean(lrs))
-        std_hrs.append(np.std(hrs))
-        std_lrs.append(np.std(lrs))
-        med_hrs.append(np.median(hrs))
-        med_lrs.append(np.median(lrs))
-        percent_75_hrs.append(np.percentile(hrs, 75))
-        percent_75_lrs.append(np.percentile(lrs, 75))
-        percent_25_hrs.append(np.percentile(hrs, 25))
-        percent_25_lrs.append(np.percentile(lrs, 25))
-        upper_range_hrs.append(
-            np.percentile(hrs, 25)
-            - 1.5 * (np.percentile(hrs, 75) - np.percentile(hrs, 25))
-        )
-        lower_range_hrs.append(
-            np.percentile(hrs, 75)
-            + 1.5 * (np.percentile(hrs, 75) - np.percentile(hrs, 25))
-        )
-        upper_range_lrs.append(
-            np.percentile(lrs, 25)
-            - 1.5 * (np.percentile(lrs, 75) - np.percentile(lrs, 25))
-        )
-        lower_range_lrs.append(
-            np.percentile(lrs, 75)
-            + 1.5 * (np.percentile(lrs, 75) - np.percentile(lrs, 25))
-        )
-        # Check if IV or Endurance
+        # Check if Test Type
+        # IV Test
         if isinstance(test, tests.IVTest):
             split_data = split_dataframe(data)
             for data in split_data:
-                i_max_set, i_max_reset = get_i_max(data)
+                i_max_set, i_max_reset = get_i_max_iv(data)
                 i_max_pos.append(i_max_set)
                 i_max_neg.append(i_max_reset)
                 set_volt, reset_volt = find_set_reset(data)
                 set_v.append(set_volt)
                 reset_v.append(reset_volt)
+                hrs.append(functions.find_hrs_iv(data))
+                lrs.append(functions.find_lrs_iv(data))
+            avg_hrs.append(np.mean(hrs))
+            avg_lrs.append(np.mean(lrs))
+            std_hrs.append(None)
+            std_lrs.append(None)
+            med_hrs.append(None)
+            med_lrs.append(None)
+            percent_75_hrs.append(None)
+            percent_75_lrs.append(None)
+            percent_25_hrs.append(None)
+            percent_25_lrs.append(None)
+            upper_range_hrs.append(None)
+            lower_range_hrs.append(None)
+            upper_range_lrs.append(None)
+            lower_range_lrs.append(None)
             avg_set_volt.append(np.mean(set_v))
             avg_reset_volt.append(np.mean(reset_v))
             std_set_volt.append(np.std(set_v))
@@ -349,8 +474,152 @@ def create_master_excel(filename, ran_test, folder_path):
                 np.percentile(i_max_neg, 75)
                 + 1.5 * (np.percentile(i_max_neg, 75) - np.percentile(i_max_neg, 25))
             )
+        # Forming IV Test
+        elif isinstance(test, tests.FormingTest):
+            for data in split_data:
+                i_max_set = get_i_max_forming(data)
+                i_max_pos.append(i_max_set)
+                set_volt = find_set(data)
+                set_v.append(set_volt)
+            avg_hrs.append(None)
+            avg_lrs.append(None)
+            std_hrs.append(None)
+            std_lrs.append(None)
+            med_hrs.append(None)
+            med_lrs.append(None)
+            percent_75_hrs.append(None)
+            percent_75_lrs.append(None)
+            percent_25_hrs.append(None)
+            percent_25_lrs.append(None)
+            upper_range_hrs.append(None)
+            lower_range_hrs.append(None)
+            upper_range_lrs.append(None)
+            lower_range_lrs.append(None)
+            avg_set_volt.append(np.mean(set_v))
+            avg_reset_volt.append(None)
+            std_set_volt.append(np.std(set_v))
+            std_reset_volt.append(None)
+            med_set_volt.append(np.median(set_v))
+            med_reset_volt.append(None)
+            percent_75_set_volt.append(np.percentile(set_v, 75))
+            percent_75_reset_volt.append(None)
+            percent_25_set_volt.append(np.percentile(set_v, 75))
+            percent_25_reset_volt.append(None)
+            upper_range_set_volt.append(
+                np.percentile(set_v, 25)
+                - 1.5 * (np.percentile(set_v, 75) - np.percentile(set_v, 25))
+            )
+            lower_range_set_volt.append(
+                np.percentile(set_v, 75)
+                + 1.5 * (np.percentile(set_v, 75) - np.percentile(set_v, 25))
+            )
+            upper_range_reset_volt.append(None)
+            lower_range_reset_volt.append(None)
+            avg_i_max_set.append(np.mean(i_max_pos))
+            std_i_max_set.append(np.std(i_max_pos))
+            med_i_max_set.append(np.median(i_max_pos))
+            percent_75_i_max_set.append(np.percentile(i_max_pos, 75))
+            percent_25_i_max_set.append(np.percentile(i_max_pos, 25))
+            upper_range_i_max_set.append(
+                np.percentile(i_max_pos, 25)
+                - 1.5 * (np.percentile(i_max_pos, 75) - np.percentile(i_max_pos, 25))
+            )
+            lower_range_i_max_set.append(
+                np.percentile(i_max_pos, 75)
+                + 1.5 * (np.percentile(i_max_pos, 75) - np.percentile(i_max_pos, 25))
+            )
+            avg_i_max_reset.append(None)
+            std_i_max_reset.append(None)
+            med_i_max_reset.append(None)
+            percent_75_i_max_reset.append(None)
+            percent_25_i_max_reset.append(None)
+            upper_range_i_max_reset.append(None)
+            lower_range_i_max_reset.append(None)
+        # Read Endurance
+        elif isinstance(test, tests.ReadTest):
+            hrs = functions.find_hrs_rt(data)
+            avg_hrs.append(np.mean(hrs))
+            avg_lrs.append(None)
+            std_hrs.append(np.std(hrs))
+            std_lrs.append(None)
+            med_hrs.append(np.median(hrs))
+            med_lrs.append(None)
+            percent_75_hrs.append(np.percentile(hrs, 75))
+            percent_75_lrs.append(None)
+            percent_25_hrs.append(np.percentile(hrs, 25))
+            percent_25_lrs.append(None)
+            upper_range_hrs.append(
+                np.percentile(hrs, 25)
+                - 1.5 * (np.percentile(hrs, 75) - np.percentile(hrs, 25))
+            )
+            lower_range_hrs.append(
+                np.percentile(hrs, 75)
+                + 1.5 * (np.percentile(hrs, 75) - np.percentile(hrs, 25))
+            )
+            upper_range_lrs.append(None)
+            lower_range_lrs.append(None)
+            set_v.append(None)
+            reset_v.append(None)
+            avg_set_volt.append(None)
+            avg_reset_volt.append(None)
+            std_set_volt.append(None)
+            std_reset_volt.append(None)
+            med_set_volt.append(None)
+            med_reset_volt.append(None)
+            percent_75_set_volt.append(None)
+            percent_75_reset_volt.append(None)
+            percent_25_set_volt.append(None)
+            percent_25_reset_volt.append(None)
+            upper_range_set_volt.append(None)
+            lower_range_set_volt.append(None)
+            upper_range_reset_volt.append(None)
+            lower_range_reset_volt.append(None)
+            avg_i_max_set.append(None)
+            std_i_max_set.append(None)
+            med_i_max_set.append(None)
+            percent_75_i_max_set.append(None)
+            percent_25_i_max_set.append(None)
+            upper_range_i_max_set.append(None)
+            lower_range_i_max_set.append(None)
+            avg_i_max_reset.append(None)
+            std_i_max_reset.append(None)
+            med_i_max_reset.append(None)
+            percent_75_i_max_reset.append(None)
+            percent_25_i_max_reset.append(None)
+            upper_range_i_max_reset.append(None)
+            lower_range_i_max_reset.append(None)
+        # Full Endurance
         elif isinstance(test, tests.EnduranceTest):
             # Not calculated in ET, but cols must be equal lengths so fill them with None
+            for data in split_data:
+                hrs.append(functions.find_hrs_et(data))
+                lrs.append(functions.find_lrs_et(data))
+            avg_hrs.append(np.mean(hrs))
+            avg_lrs.append(np.mean(lrs))
+            std_hrs.append(np.std(hrs))
+            std_lrs.append(np.std(lrs))
+            med_hrs.append(np.median(hrs))
+            med_lrs.append(np.median(lrs))
+            percent_75_hrs.append(np.percentile(hrs, 75))
+            percent_75_lrs.append(np.percentile(lrs, 75))
+            percent_25_hrs.append(np.percentile(hrs, 25))
+            percent_25_lrs.append(np.percentile(lrs, 25))
+            upper_range_hrs.append(
+                np.percentile(hrs, 25)
+                - 1.5 * (np.percentile(hrs, 75) - np.percentile(hrs, 25))
+            )
+            lower_range_hrs.append(
+                np.percentile(hrs, 75)
+                + 1.5 * (np.percentile(hrs, 75) - np.percentile(hrs, 25))
+            )
+            upper_range_lrs.append(
+                np.percentile(lrs, 25)
+                - 1.5 * (np.percentile(lrs, 75) - np.percentile(lrs, 25))
+            )
+            lower_range_lrs.append(
+                np.percentile(lrs, 75)
+                + 1.5 * (np.percentile(lrs, 75) - np.percentile(lrs, 25))
+            )
             set_v.append(None)
             reset_v.append(None)
             avg_set_volt.append(None)
@@ -385,11 +654,11 @@ def create_master_excel(filename, ran_test, folder_path):
     # Send to Dataframe
     dataframe["ChipName"] = chip_name
     dataframe["Row"] = row
-    dataframe["Col"] = col
+    dataframe["Col"] = col 
     dataframe["TestType"] = test_type
     dataframe["Avg. HRS"] = avg_hrs
     dataframe["Avg. LRS"] = avg_lrs
-    dataframe["Std_Dev_HRS"] = std_hrs
+    dataframe["Std_Dev_HRS"] = std_hrs 
     dataframe["Std_Dev_LRS"] = std_lrs
     dataframe["Med. HRS"] = med_hrs
     dataframe["Med. LRS"] = med_lrs
@@ -443,7 +712,19 @@ def find_set_reset(dataframe):
     return set_volt, reset_volt
 
 
-def get_i_max(dataframe):
+def find_set(dataframe):
+    """
+    return:
+        set, reset voltages in a list that is used to create a statiscal analysis
+    """
+    set_df = dataframe[dataframe["Voltage"] > 0]
+    slopes_set = np.diff(set_df["Current"])
+    slopes_max_index = np.argmax(slopes_set)
+    set_volt = set_df.iloc[slopes_max_index, 0]
+    return set_volt
+
+
+def get_i_max_iv(dataframe):
     """
     Grabs the two largest currents in the dataframe,
     one when voltage postitive and other when its negative
@@ -453,6 +734,12 @@ def get_i_max(dataframe):
     reset_df = dataframe[dataframe["Voltage"] < 0]
     i_max_reset = max(reset_df["Current"])
     return i_max_set, i_max_reset
+
+
+def get_i_max_forming(dataframe):
+    set_df = dataframe[dataframe["Voltage"] > 0]
+    i_max_set = max(set_df["Current"])
+    return i_max_set
 
 
 def split_dataframe(dataframe):
@@ -490,5 +777,4 @@ def calc_iqr(data):
 
 sm = SourceMeter()
 sm.run_test()
-sm.create_excel_sheets()
 sm.run_post_test_gui()

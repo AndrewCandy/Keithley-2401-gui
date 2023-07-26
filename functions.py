@@ -153,15 +153,65 @@ def staircase_log(
         measure = measure + "," + measure_down[:-1]
     return measure
 
+def staircase_forming(
+    instrument,
+    current_compliance,
+    source_voltage,
+    source_delay,
+    source_voltage_start,
+    source_voltage_stop,
+    source_voltage_step,
+    trig_count,
+    accuracy
+):
+    """
+    Instructions to be sent to the sourcemeter
+    Returns a string containing all the data received from sourcemeter
+    """
+    # UP
+    instrument.timeout = 100000
+    instrument.write("SYST:REM")
+    instrument.write("*RST")
+    instrument.write(":SYST:BEEP:STAT 0")
+    instrument.write(f":SENS:VOLT:NPLC {accuracy}")
+    instrument.write(f":SENS:CURR:PROT {current_compliance}")
+    instrument.write(f":SOUR:VOLT {source_voltage}")
+    instrument.write(f":SOUR:DEL {source_delay}")
+    instrument.write(":SOUR:SWE:RANG BEST")
+    instrument.write(":SOUR:VOLT:MODE SWE")
+    instrument.write(":SOUR:SWE:SPAC LIN")
+    instrument.write(f":SOUR:VOLT:STAR {source_voltage_start}")
+    instrument.write(f":SOUR:VOLT:STOP {source_voltage_stop}")
+    instrument.write(f":SOUR:VOLT:STEP {source_voltage_step}")
+    instrument.write(f":TRIG:COUN {trig_count}")
+    instrument.write(":OUTP ON")
+    measure = instrument.query(":READ?")[:-1]
+    # DOWN
+    instrument.write(f":SENS:VOLT:NPLC {accuracy}")
+    instrument.write(f":SENS:CURR:PROT {current_compliance}")
+    instrument.write(f":SOUR:VOLT {source_voltage_stop}")
+    instrument.write(f":SOUR:DEL {source_delay}")
+    instrument.write(":SOUR:SWE:RANG BEST")
+    instrument.write(":SOUR:VOLT:MODE SWE")
+    instrument.write(":SOUR:SWE:SPAC LIN")
+    instrument.write(f":SOUR:VOLT:STAR {source_voltage_stop}")
+    instrument.write(f":SOUR:VOLT:STOP {source_voltage_start}")
+    instrument.write(f":SOUR:VOLT:STEP {source_voltage_step*-1}")
+    instrument.write(f":TRIG:COUN {trig_count+1}")
+    instrument.write(":OUTP ON")
+    measure_down = instrument.query(":READ?")[:-1]
+    measure = measure + "," + measure_down
+    return measure
 
 def endurance_test(
     instrument,
+    accuracy,
     current_compliance,
     source_voltage,
     source_delay,
     voltage_list,
     list_length,
-):
+    ):
     """
     Instructions to be sent to the sourcemeter
     Returns a string containing all the data received from sourcemeter
@@ -170,7 +220,7 @@ def endurance_test(
     instrument.write("SYST:REM")
     instrument.write("*RST")
     instrument.write(":SYST:BEEP:STAT 0")
-    instrument.write(":SENS:VOLT:NPLC 0.01")
+    instrument.write(f":SENS:VOLT:NPLC {accuracy}")
     instrument.write(f":SENS:CURR:PROT {current_compliance}")
     instrument.write(f":SOUR:VOLT {source_voltage}")
     instrument.write(f":SOUR:DEL {source_delay}")
@@ -182,6 +232,35 @@ def endurance_test(
     measure = (instrument.query(":READ?"))[:-1]
     return measure
 
+
+def read_test(
+    instrument,
+    accuracy,
+    current_compliance,
+    source_voltage,
+    source_delay,
+    voltage_list,
+    list_length,
+    ):
+    """ 
+    Instructions to be sent to the sourcemeter
+    Returns a string containing all the data received from sourcemeter
+    """
+    instrument.timeout = 10000
+    instrument.write("SYST:REM")
+    instrument.write("*RST")
+    instrument.write(":SYST:BEEP:STAT 0")
+    instrument.write(f":SENS:VOLT:NPLC {accuracy}")
+    instrument.write(f":SENS:CURR:PROT {current_compliance}")
+    instrument.write(f":SOUR:VOLT {source_voltage}")
+    instrument.write(f":SOUR:DEL {source_delay}")
+    instrument.write(":SOUR:SWE:RANG BEST")
+    instrument.write(":SOUR:VOLT:MODE LIST")
+    instrument.write(f":SOUR:LIST:VOLT {voltage_list}")
+    instrument.write(f":TRIG:COUN {list_length}")
+    instrument.write(":OUTP ON")
+    measure = (instrument.query(":READ?"))[:-1]
+    return measure
 
 def create_voltage_list(set_voltage, read_voltage, reset_voltage):
     """
@@ -200,6 +279,12 @@ def create_voltage_list(set_voltage, read_voltage, reset_voltage):
     volt_string = ", ".join(str(item) for item in voltage)
     return volt_string
 
+def create_read_voltage_list(read_voltage):
+    voltage  =[]
+    voltage.append(read_voltage)
+    voltage.append(0)
+    volt_string = ", ".join(str(item) for item in voltage)
+    return volt_string
 
 def calc_trig_count(
     source_voltage_stop,
@@ -256,7 +341,7 @@ def create_main_folder():
     return folder_path
 
 
-def find_hrs(dataframe):
+def find_hrs_et(dataframe):
     """
     Input dataframe must be data from endurance test
     returns list of HRS readings from endurance test
@@ -268,7 +353,7 @@ def find_hrs(dataframe):
     return hrs
 
 
-def find_lrs(dataframe):
+def find_lrs_et(dataframe):
     """
     Input dataframe must be data from endurance test
     returns list of LRS readings from endurance test
@@ -277,4 +362,51 @@ def find_lrs(dataframe):
     lrs = []
     for i in range(6, len(resistance), 8):
         lrs.append(resistance[i])
+    return lrs
+
+def find_hrs_rt(dataframe):
+    """
+    Input dataframe must be data from endurance test
+    returns list of HRS readings from endurance test
+    """
+    resistance = dataframe["Real Resistance"]
+    hrs = []
+    for i in range(0, len(resistance),2):
+        hrs.append(resistance[i])
+    return hrs
+
+
+def find_hrs_iv(dataframe):
+    """
+    Input dataframe must be data from an endurance test
+    Returns a list of HRS readings from the endurance test
+    """
+    resistance = dataframe["Real Resistance"]
+    voltage = dataframe["Voltage"]
+    hrs = []
+
+    prev_voltage = voltage.iloc[0]  # Store the previous voltage value
+    for i in range(1, len(voltage)):
+        if voltage.iloc[i] < 0.2 and voltage.iloc[i] < prev_voltage:
+            hrs.append(resistance.iloc[i])
+        prev_voltage = voltage.iloc[i]  # Update the previous voltage value
+
+    return hrs
+
+
+def find_lrs_iv(dataframe):
+    """
+    Input dataframe must be data from an endurance test
+    Returns a list of LRS readings from the endurance test
+    """
+    resistance = dataframe["Real Resistance"]
+    voltage = dataframe["Voltage"]
+    lrs = []
+
+    prev_voltage = voltage.iloc[0]  # Store the previous voltage value
+    for i in range(1, len(voltage)):
+        if voltage.iloc[i] > 0.2 and voltage.iloc[i] > prev_voltage:
+            lrs.append(resistance.iloc[i])
+        prev_voltage = voltage.iloc[i]  # Update the previous voltage value
+
     return lrs
